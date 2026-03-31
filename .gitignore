@@ -1,0 +1,11 @@
+# Fundamento: Exclusión de Artefactos (Artifact Exclusion).
+# Solo queremos subir el código fuente y las recetas (Dockerfiles), no los binarios.
+cat <<EOT > .gitignore
+node_modules/
+frontend/dist/
+backend/__pycache__/
+backend/venv/
+*.pyc
+postgres_data/
+.env
+EOT
