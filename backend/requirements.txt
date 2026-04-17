@@ -4,3 +4,7 @@ pandas==2.1.1
 numpy==1.26.0
 xgboost==2.0.0
 shap==0.43.0
+SQLAlchemy==2.0.21
+bcrypt==4.0.1
+PyJWT==2.8.0
+Flask-Cors==4.0.0
