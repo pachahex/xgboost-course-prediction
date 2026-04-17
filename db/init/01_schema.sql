@@ -1,5 +1,5 @@
 -- ==============================================================================
--- ESQUEMA DE BASE DE DATOS: ACADEMIA AUTOPOIESIS (PostgreSQL 18)[cite: 4]
+-- ESQUEMA DE BASE DE DATOS: ACADEMIA AUTOPOIESIS (PostgreSQL 18 )[cite: 4]
 -- ==============================================================================
 
 -- 1. Fundamento: Restricciones de Dominio y Normalización a 1NF (Primera Forma Normal) y 2NF (Segunda Forma Normal)[cite: 4]

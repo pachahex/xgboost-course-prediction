@@ -1,37 +1,33 @@
-version: '3.8'
-
-# Fundamento: Arquitectura Orientada a Servicios (SOA / Service-Oriented Architecture).
-# Se definen bloques lógicos independientes que se comunican a través de una red interna.
 services:
   db:
-    image: postgres:15-alpine
-    # Fundamento: Inyección de Dependencias a través de Variables de Entorno.
-    # Desacopla las credenciales del código fuente.
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password123
       POSTGRES_DB: autopoiesis_db
     ports:
-      - "5432:5432"
-    # Fundamento: Persistencia de Datos (Volúmenes).
-    # Evita que los datos mueran cuando el contenedor de la base de datos se apague o reinicie.
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Fundamento: Auto-aprovisionamiento (Seed). Monta el script local[cite: 2] en el directorio de arranque.
       - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d autopoiesis_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
     ports:
       - "5000:5000"
     environment:
-      # Fundamento: Cadena de Conexión Dinámica.
-      # Se usa el nombre del servicio ('db') como host gracias al DNS interno de Docker.
       DATABASE_URL: postgresql://admin:password123@db:5432/autopoiesis_db
-    # Fundamento: Control de Dependencia de Arranque.
-    # Garantiza que el backend no intente conectarse antes de que el motor SQL esté listo.
+    # Fundamento: Control de Dependencia Expandido.
+    # Se cambia la lista simple por un diccionario de configuración. 
+    # Esto permite que el backend espere específicamente al estado 'healthy' del servicio 'db'.
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./backend:/app
 
@@ -39,13 +35,10 @@ services:
     build: ./frontend
     ports:
       - "3000:3000"
-    # Fundamento: Variables de Entorno en Tiempo de Construcción/Ejecución.
     environment:
-      - REACT_APP_API_URL=http://localhost:5000
+      - VITE_API_URL=http://localhost:5000
     depends_on:
       - backend
-    # Fundamento: Recarga en Caliente (Hot Reloading). 
-    # Sincroniza los archivos locales con el contenedor para desarrollo fluido.
     volumes:
       - ./frontend:/app
       - /app/node_modules

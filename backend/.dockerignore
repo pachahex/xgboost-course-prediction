@@ -1,0 +1,8 @@
+# Fundamento: Aislamiento de Entorno (Environment Isolation).
+# Previene que el entorno virtual local de Python o archivos binarios cacheados dependientes del SO (Sistema Operativo) anfitrión sean copiados a la imagen, lo que causaría conflictos de arquitectura (ej. Windows vs Linux).
+venv/
+__pycache__/
+
+# Fundamento: Seguridad por Defecto (Secure by Default).
+# Evita que credenciales locales de desarrollo se filtren permanentemente en el historial de capas de la imagen del contenedor.
+.env

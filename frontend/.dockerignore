@@ -1,0 +1,5 @@
+# Fundamento: Minimización del Contexto de Construcción (Build Context Minimization).
+# El demonio de Docker envía todo el directorio al motor de construcción. Excluir la carpeta de dependencias, que puede pesar cientos de megabytes, reduce el uso de memoria, el tiempo de transferencia de I/O (Input/Output / Entrada/Salida) y asegura que las dependencias nativas (como esbuild) se compilen limpiamente para el SO (Sistema Operativo) del contenedor.
+node_modules/
+dist/
+.env
