@@ -31,9 +31,9 @@ const DashboardLayout = () => {
           <Link to="/dashboard/inscripciones" style={getLinkStyle('/dashboard/inscripciones')}>
             📋 Registro Histórico
           </Link>
-          <div style={{...getLinkStyle('#'), opacity: 0.5, cursor: 'not-allowed'}}>
-            🧠 Demanda (Próximamente)
-          </div>
+          <Link to="/dashboard/ia-predictiva" style={getLinkStyle('/dashboard/ia-predictiva')}>
+            🧠 IA y Demanda
+          </Link>
         </nav>
       </aside>
 

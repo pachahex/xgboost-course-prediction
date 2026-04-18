@@ -195,6 +195,44 @@ def get_inscripciones():
         "data": inscripciones
     })
 
+@app.route('/api/admin/predicciones', methods=['GET'])
+@admin_required
+def get_predicciones():
+    """Retorna las predicciones de demanda aglutinadas con sus coeficientes SHAP (Explicabilidad)"""
+    programa_id = request.args.get('programa_id')
+    
+    with get_db_connection() as conn:
+        # Por simplicidad, obtenemos el histórico y las predicciones conjuntas de las últimas/futuras semanas
+        where_clause = "WHERE pr.programa_id = :pid" if programa_id else ""
+        
+        query = text(f"""
+            SELECT p.nombre as programa, pr.anio_objetivo, pr.semana_objetivo, 
+                   pr.demanda_predicha, pr.resumen_shap, c.conteo_demanda as demanda_real
+            FROM predicciones pr
+            JOIN programas p ON pr.programa_id = p.id
+            LEFT JOIN caracteristicas_demanda_semanal c 
+              ON c.programa_id = pr.programa_id AND c.anio = pr.anio_objetivo AND c.semana_del_anio = pr.semana_objetivo
+            {where_clause}
+            ORDER BY pr.anio_objetivo DESC, pr.semana_objetivo DESC
+            LIMIT 52
+        """)
+        
+        params = {"pid": programa_id} if programa_id else {}
+        result = conn.execute(query, params).fetchall()
+        
+        predicciones = []
+        for r in result:
+            predicciones.append({
+                "programa": r.programa,
+                "periodo": f"{r.anio_objetivo}-W{str(r.semana_objetivo).zfill(2)}",
+                "demanda_real": r.demanda_real,
+                "demanda_predicha": round(r.demanda_predicha, 1),
+                "shap": r.resumen_shap
+            })
+            
+    # Invertir para que vengan cronológicamente en los gráficos de Recharts
+    return jsonify(predicciones[::-1])
+
 if __name__ == '__main__':
     # Habilitamos Flask para escuchar peticiones de Docker u host externo
     app.run(host='0.0.0.0', port=5000, debug=True)

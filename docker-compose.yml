@@ -1,3 +1,5 @@
+TZ = 'America/La_Paz'
+
 services:
   db:
     image: postgres:18-alpine
@@ -55,4 +57,4 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres_data:
+  postgres_data:

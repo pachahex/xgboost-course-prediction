@@ -8,6 +8,7 @@ import Diplomados from './pages/Diplomados';
 import Login from './pages/Login';
 import DashboardLayout from './pages/dashboard/DashboardLayout';
 import Inscripciones from './pages/dashboard/Inscripciones';
+import IAPredictiva from './pages/dashboard/IAPredictiva';
 import './index.css';
 
 // Componente simple para proteger rutas
@@ -44,7 +45,7 @@ function App() {
             }>
               <Route index element={<h2 style={{padding: '20px'}}>Bienvenido al Panel de Control de Autopoiesis</h2>} />
               <Route path="inscripciones" element={<Inscripciones />} />
-              {/* <Route path="prediccion" element={<DemandaPrediccion />} /> */}
+              <Route path="ia-predictiva" element={<IAPredictiva />} />
             </Route>
             
             {/* Fallback */}
