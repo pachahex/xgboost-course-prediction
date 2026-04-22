@@ -1,8 +1,6 @@
-TZ = 'America/La_Paz'
-
 services:
   db:
-    image: postgres:18-alpine
+    image: postgres:15-alpine
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password123
