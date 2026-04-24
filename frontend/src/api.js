@@ -1,4 +1,4 @@
-const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const base = import.meta.env.VITE_API_URL || '/api';
 export const API_URL = base.endsWith('/api') ? base : `${base}/api`;
 
 // Función genérica para fetch centralizado, maneja HTTP-Only auth passthrough

@@ -130,18 +130,59 @@ Para acceder al sistema privado y visualizar el dashboard, utiliza los siguiente
 
 Ya que este ecosistema está 100% contenerizado (Dockerizado), la portabilidad está garantizada universalmente sin importar si usas Windows, Mac o Linux.
 
+### Inicio Rápido (1 Comando)
+Con Docker Desktop encendido, desde la raíz del proyecto ejecuta:
+
+```bash
+docker compose up -d --build
+```
+
+Eso es todo. El proyecto ya está configurado para arrancar sin pasos extra usando valores por defecto.
+
+### Personalización Opcional con `.env`
+Si quieres cambiar puertos, credenciales o secretos en otra PC:
+
+1. Copia `.env.example` a `.env`.
+2. Edita solo los valores que necesites.
+3. Ejecuta el mismo comando:
+
+```bash
+docker compose up -d --build
+```
+
+> El proyecto usa `TZ=America/La_Paz` por defecto. Puedes ajustarlo en `.env` si fuera necesario.
+
+> Si ya tenías un volumen antiguo creado antes de esta corrección de zona horaria, ejecuta una sola vez:
+
+```bash
+Get-Content db/timezone_migration.sql | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U admin -d autopoiesis_db
+```
+
 ### Para Detener el Sistema (Al finalizar tu jornada)
 No basta con cerrar la terminal. Para liberar los puertos y detener limpiamente las bases de datos y servidores, ejecuta en la raíz del proyecto:
 ```bash
-docker-compose down
+docker compose down
 ```
 *(Toda la data transaccional e histórica persistirá a salvo en el volumen inmutable de PostgreSQL `postgres_data`)*.
 
 ### Para Reanudar o Desplegar en una Computadora Nueva
 1. Tienes que clonar o descargar este repositorio (y asegurarte de que Docker Desktop esté corriendo).
 2. Dirígete en tu terminal hasta la carpeta principal del proyecto.
-3. Ejecuta el comando maestro de reconstrucción abstracta:
+3. Ejecuta el modo estable (recomendado para cualquier PC):
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
-> **¿Qué hace esto?** `-d` libera tu terminal de los logs dejándolos en el entorno de fondo (Detached mode), y `--build` obliga a Docker a escanear `package.json` y `requirements.txt` instalando cualquier dependencia de Python o Node.js que haya sido añadida remotamente, logrando el despliegue automático.
+> Este comando usa la configuración portable por defecto: frontend compilado y servido por Nginx, backend con Gunicorn y sin bind mounts del host.
+
+### Modo Desarrollo (Hot Reload)
+Si quieres editar código y ver cambios en vivo, usa el archivo de override de desarrollo:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+Para detener el modo desarrollo:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+```

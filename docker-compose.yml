@@ -1,55 +1,68 @@
 services:
   db:
     image: postgres:15-alpine
+    command: ["postgres", "-c", "timezone=${TZ:-America/La_Paz}"]
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: autopoiesis_db
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password123}
+      POSTGRES_DB: ${POSTGRES_DB:-autopoiesis_db}
+      TZ: ${TZ:-America/La_Paz}
+      PGTZ: ${TZ:-America/La_Paz}
     ports:
-      - "5433:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d autopoiesis_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-autopoiesis_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
     ports:
-      - "5000:5000"
+      - "${BACKEND_PORT:-5000}:5000"
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://admin:password123@db:5432/autopoiesis_db
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-password123}@db:5432/${POSTGRES_DB:-autopoiesis_db}
+      SECRET_KEY: ${SECRET_KEY:-autopoiesis_super_secret_dev_key}
+      TZ: ${TZ:-America/La_Paz}
+      PGTZ: ${TZ:-America/La_Paz}
+      DB_TIMEZONE: ${TZ:-America/La_Paz}
     # Fundamento: Control de Dependencia Expandido.
     # Se cambia la lista simple por un diccionario de configuración. 
     # Esto permite que el backend espere específicamente al estado 'healthy' del servicio 'db'.
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: prod
+      args:
+        VITE_API_URL: /api
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
+    restart: unless-stopped
     environment:
-      - VITE_API_URL=http://localhost:5000
+      TZ: ${TZ:-America/La_Paz}
     depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      backend:
+        condition: service_started
 
   pgadmin:
     image: dpage/pgadmin4
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@autopoiesis.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@autopoiesis.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      TZ: ${TZ:-America/La_Paz}
     ports:
-      - "5051:80"
+      - "${PGADMIN_PORT:-5051}:80"
     depends_on:
       db:
         condition: service_healthy

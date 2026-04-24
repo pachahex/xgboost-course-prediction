@@ -6,8 +6,10 @@ import bcrypt
 from sqlalchemy import text
 from db import get_db_connection
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 # Habilitamos CORS, importante supportar cookies para HTTP-Only con frameworks JS (React)
 CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
 

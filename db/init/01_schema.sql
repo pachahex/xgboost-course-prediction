@@ -47,7 +47,7 @@ CREATE TABLE usuarios (
     nombre_completo VARCHAR(150) NOT NULL,
     correo VARCHAR(150) UNIQUE NOT NULL,
     hash_contrasena VARCHAR(255) NOT NULL,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_usuario_rol FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT
     -- Fundamento: Integridad Referencial mediante FK (Llave Foránea)[cite: 4]. 
     -- 'ON DELETE RESTRICT' aplica el principio de prevención de datos huérfanos[cite: 4]. 
@@ -60,7 +60,7 @@ CREATE TABLE programas (
     tipo_servicio_id INT NOT NULL,
     nombre VARCHAR(200) NOT NULL,
     costo_oficial_bs DECIMAL(10, 2) NOT NULL,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_programa_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT,
     CONSTRAINT fk_programa_servicio FOREIGN KEY (tipo_servicio_id) REFERENCES tipos_servicio(id) ON DELETE RESTRICT
     -- Fundamento: Composición en el modelo Entidad-Relación[cite: 4].
@@ -106,7 +106,7 @@ CREATE TABLE caracteristicas_demanda_semanal (
     edad_promedio DECIMAL(5, 2),
     seno_semana DOUBLE PRECISION NOT NULL,
     coseno_semana DOUBLE PRECISION NOT NULL,
-    registrado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    registrado_en TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_caracteristicas_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
     CONSTRAINT uq_programa_anio_semana UNIQUE (programa_id, anio, semana_del_anio)
     -- Fundamento: Clave Alterna mediante restricción UNIQUE[cite: 4].
@@ -128,7 +128,7 @@ CREATE TABLE predicciones (
     demanda_predicha FLOAT NOT NULL,
     nivel_confianza FLOAT,
     resumen_shap JSONB,
-    predicho_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    predicho_en TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_prediccion_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE
     -- Fundamento: Estructuras de Datos No Relacionales en Entornos Relacionales[cite: 4].
     -- El uso de 'JSONB' (JavaScript Object Notation Binary) permite almacenar el 
