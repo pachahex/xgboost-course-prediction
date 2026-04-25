@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import DashboardLayout from './pages/dashboard/DashboardLayout';
 import Inscripciones from './pages/dashboard/Inscripciones';
 import IAPredictiva from './pages/dashboard/IAPredictiva';
+import GestorProgramas from './pages/dashboard/GestorProgramas';
 import './index.css';
 
 // Componente simple para proteger rutas
@@ -43,7 +44,7 @@ function App() {
                 <DashboardLayout />
               </PrivateRoute>
             }>
-              <Route index element={<h2 style={{padding: '20px'}}>Bienvenido al Panel de Control de Autopoiesis</h2>} />
+              <Route index element={<GestorProgramas />} />
               <Route path="inscripciones" element={<Inscripciones />} />
               <Route path="ia-predictiva" element={<IAPredictiva />} />
             </Route>

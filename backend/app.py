@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, send_from_directory
 from flask_cors import CORS
 import jwt
 import datetime
@@ -7,8 +7,13 @@ from sqlalchemy import text
 from db import get_db_connection
 import os
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+# Configuracion de Archivos
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 # Habilitamos CORS, importante supportar cookies para HTTP-Only con frameworks JS (React)
 CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
@@ -118,6 +123,67 @@ def get_public_stats():
         ]
     })
 
+@app.route('/api/programas', methods=['GET'])
+def get_public_programas():
+    """Retorna el catálogo unificado de Cursos y Diplomados ACTIVOS para la Portada"""
+    with get_db_connection() as conn:
+        result = conn.execute(text("""
+            SELECT p.id, p.nombre, p.costo_oficial_bs, c.nombre as categoria, 
+                   ts.nombre as tipo, p.imagen_url, p.descripcion, p.activo
+            FROM programas p
+            JOIN categorias c ON p.categoria_id = c.id
+            JOIN tipos_servicio ts ON p.tipo_servicio_id = ts.id
+            WHERE p.activo = true
+            ORDER BY p.id DESC
+        """)).fetchall()
+        
+        programas = []
+        for r in result:
+            programas.append({
+                "id": r.id,
+                "nombre": r.nombre,
+                "costo": float(r.costo_oficial_bs),
+                "categoria": r.categoria,
+                "tipo": r.tipo,
+                "imagen_url": r.imagen_url,
+                "descripcion": r.descripcion,
+                "activo": r.activo
+            })
+    return jsonify(programas)
+
+@app.route('/api/admin/programas/all', methods=['GET'])
+@admin_required
+def get_all_programas():
+    """Retorna todos los programas, tanto activos como inactivos, para el Dashboard"""
+    with get_db_connection() as conn:
+        result = conn.execute(text("""
+            SELECT p.id, p.nombre, p.costo_oficial_bs, c.nombre as categoria, 
+                   ts.nombre as tipo, p.imagen_url, p.descripcion, p.activo
+            FROM programas p
+            JOIN categorias c ON p.categoria_id = c.id
+            JOIN tipos_servicio ts ON p.tipo_servicio_id = ts.id
+            ORDER BY p.id DESC
+        """)).fetchall()
+        
+        programas = []
+        for r in result:
+            programas.append({
+                "id": r.id,
+                "nombre": r.nombre,
+                "costo": float(r.costo_oficial_bs),
+                "categoria": r.categoria,
+                "tipo": r.tipo,
+                "imagen_url": r.imagen_url,
+                "descripcion": r.descripcion,
+                "activo": r.activo
+            })
+    return jsonify(programas)
+
+@app.route('/api/uploads/<path:filename>')
+def serve_upload(filename):
+    """Serve los archivos estáticos guardados por los administradores"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 @app.route('/api/suscribir', methods=['POST'])
 def suscribir():
     """Captura de leads/correos del footer asegurando tener un rol genérico (Ej. Suscriptor)"""
@@ -196,6 +262,105 @@ def get_inscripciones():
         "page": page,
         "data": inscripciones
     })
+
+@app.route('/api/admin/programas', methods=['POST'])
+@admin_required
+def create_programa():
+    """Recibe detalles de un nuevo programa (Curso/Diplomado) y su miniatura visual opcional"""
+    # En Multipart Form los datos vienen en request.form y request.files
+    nombre = request.form.get('nombre')
+    costo = request.form.get('costo')
+    categoria_id = request.form.get('categoria_id')
+    tipo_servicio_id = request.form.get('tipo_servicio_id')
+    descripcion = request.form.get('descripcion')
+    activo = request.form.get('activo') == 'true'
+    
+    if not all([nombre, costo, categoria_id, tipo_servicio_id]):
+         return jsonify({"error": "Faltan campos obligatorios"}), 400
+         
+    file = request.files.get('imagen')
+    imagen_url = None
+    
+    if file and file.filename != '':
+        filename = secure_filename(f"{int(datetime.datetime.now().timestamp())}_{file.filename}")
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        imagen_url = f"/api/uploads/{filename}"
+        
+    with get_db_connection() as conn:
+        with conn.begin():
+            conn.execute(text("""
+                INSERT INTO programas (nombre, categoria_id, tipo_servicio_id, costo_oficial_bs, imagen_url, descripcion, activo)
+                VALUES (:n, :c_id, :t_id, :costo, :img, :desc, :act)
+            """), {
+                "n": nombre.upper(), 
+                "c_id": categoria_id, 
+                "t_id": tipo_servicio_id, 
+                "costo": costo,
+                "img": imagen_url,
+                "desc": descripcion,
+                "act": activo
+            })
+            
+    return jsonify({"message": "Programa publicado con éxito"}), 201
+
+@app.route('/api/admin/programas/<int:programa_id>', methods=['PUT'])
+@admin_required
+def update_programa(programa_id):
+    """Actualiza la información (y opcionalmente la imagen) de un programa existente para conservar historial ML"""
+    nombre = request.form.get('nombre')
+    costo = request.form.get('costo')
+    categoria_id = request.form.get('categoria_id')
+    tipo_servicio_id = request.form.get('tipo_servicio_id')
+    descripcion = request.form.get('descripcion')
+    activo = request.form.get('activo') == 'true'
+    
+    if not all([nombre, costo, categoria_id, tipo_servicio_id]):
+         return jsonify({"error": "Faltan campos obligatorios"}), 400
+         
+    file = request.files.get('imagen')
+    imagen_url = None
+    
+    if file and file.filename != '':
+        filename = secure_filename(f"{int(datetime.datetime.now().timestamp())}_{file.filename}")
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        imagen_url = f"/api/uploads/{filename}"
+
+    with get_db_connection() as conn:
+        with conn.begin():
+            if imagen_url:
+                conn.execute(text("""
+                    UPDATE programas 
+                    SET nombre = :n, categoria_id = :c_id, tipo_servicio_id = :t_id, 
+                        costo_oficial_bs = :costo, descripcion = :desc, imagen_url = :img, activo = :act
+                    WHERE id = :pid
+                """), {
+                    "n": nombre.upper(), "c_id": categoria_id, "t_id": tipo_servicio_id, 
+                    "costo": costo, "desc": descripcion, "img": imagen_url, "act": activo, "pid": programa_id
+                })
+            else:
+                conn.execute(text("""
+                    UPDATE programas 
+                    SET nombre = :n, categoria_id = :c_id, tipo_servicio_id = :t_id, 
+                        costo_oficial_bs = :costo, descripcion = :desc, activo = :act
+                    WHERE id = :pid
+                """), {
+                    "n": nombre.upper(), "c_id": categoria_id, "t_id": tipo_servicio_id, 
+                    "costo": costo, "desc": descripcion, "act": activo, "pid": programa_id
+                })
+                
+    return jsonify({"message": "Programa actualizado exitosamente!"}), 200
+
+@app.route('/api/admin/utils/catalogos', methods=['GET'])
+@admin_required
+def get_catalogos():
+    """Devuelve las categorias y tipos para los SELECT del formulario"""
+    with get_db_connection() as conn:
+        categorias = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM categorias")).fetchall()]
+        tipos = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM tipos_servicio")).fetchall()]
+    return jsonify({"categorias": categorias, "tipos_servicio": tipos})
+
 
 @app.route('/api/admin/predicciones', methods=['GET'])
 @admin_required

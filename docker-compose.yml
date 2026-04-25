@@ -32,6 +32,8 @@ services:
       TZ: ${TZ:-America/La_Paz}
       PGTZ: ${TZ:-America/La_Paz}
       DB_TIMEZONE: ${TZ:-America/La_Paz}
+    volumes:
+      - ./backend/uploads:/app/uploads
     # Fundamento: Control de Dependencia Expandido.
     # Se cambia la lista simple por un diccionario de configuración. 
     # Esto permite que el backend espere específicamente al estado 'healthy' del servicio 'db'.

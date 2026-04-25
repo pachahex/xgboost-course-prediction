@@ -26,7 +26,7 @@ const DashboardLayout = () => {
 
         <nav>
           <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
-            🏠 Resumen
+            🏠 Gestión de Programas
           </Link>
           <Link to="/dashboard/inscripciones" style={getLinkStyle('/dashboard/inscripciones')}>
             📋 Registro Histórico
