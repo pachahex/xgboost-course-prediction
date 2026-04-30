@@ -26,8 +26,20 @@ const Inscripciones = () => {
     loadInscripciones();
   }, [page]);
 
-  const thStyle = { padding: '1rem', backgroundColor: '#f8f9fa', textAlign: 'left', color: '#555', borderBottom: '2px solid #ddd' };
-  const tdStyle = { padding: '1rem', borderBottom: '1px solid #eee' };
+  const thStyle = { 
+    padding: '1rem', 
+    backgroundColor: 'var(--bg-page)', 
+    textAlign: 'left', 
+    color: 'var(--text-main)', 
+    borderBottom: '2px solid var(--glass-border)',
+    transition: 'background-color 0.3s, color 0.3s, border-color 0.3s'
+  };
+  const tdStyle = { 
+    padding: '1rem', 
+    borderBottom: '1px solid var(--glass-border)',
+    color: 'var(--text-main)',
+    transition: 'border-color 0.3s, color 0.3s'
+  };
 
   return (
     <div>
@@ -39,7 +51,7 @@ const Inscripciones = () => {
         <p>Cargando registros...</p>
       ) : (
         <>
-          <p style={{ color: '#666', marginBottom: '1rem' }}>Mostrando resultados {((page-1)*50) + 1} a {Math.min(page*50, total)} de {total}.</p>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Mostrando resultados {((page-1)*50) + 1} a {Math.min(page*50, total)} de {total}.</p>
           
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
@@ -62,14 +74,15 @@ const Inscripciones = () => {
                     <td style={tdStyle}><strong>{item.programa}</strong></td>
                     <td style={tdStyle}>{item.departamento}</td>
                     <td style={tdStyle}>{item.edad}</td>
-                    <td style={tdStyle}><span style={{color: 'green', fontWeight: 'bold'}}>{item.costo} Bs.</span></td>
+                    <td style={tdStyle}><span style={{color: 'var(--color-accent)', fontWeight: 'bold'}}>{item.costo} Bs.</span></td>
                     <td style={tdStyle}>
                       <span style={{ 
                         padding: '4px 8px', 
                         borderRadius: '12px', 
                         fontSize: '0.8rem',
-                        backgroundColor: item.estado === 'Completado' ? '#e8f5e9' : (item.estado === 'Cancelado' ? '#ffe3e3' : '#fff3cd'),
-                        color: item.estado === 'Completado' ? '#2b8a3e' : (item.estado === 'Cancelado' ? '#c92a2a' : '#e67700')
+                        backgroundColor: item.estado === 'Completado' ? 'rgba(76, 175, 80, 0.2)' : (item.estado === 'Cancelado' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(255, 193, 7, 0.2)'),
+                        color: item.estado === 'Completado' ? '#4caf50' : (item.estado === 'Cancelado' ? '#f44336' : '#ffc107'),
+                        border: '1px solid transparent'
                       }}>
                         {item.estado}
                       </span>

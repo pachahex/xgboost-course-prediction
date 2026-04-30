@@ -17,30 +17,64 @@ const DashboardLayout = () => {
     transition: 'all 0.2s'
   });
 
+  const isAdmin = user.rol === 'Administrador';
+
   return (
-    <div style={{ display: 'flex', minHeight: '80vh', backgroundColor: '#f4f6f8' }}>
+    <div style={{ display: 'flex', minHeight: '80vh', backgroundColor: 'var(--bg-page)', transition: 'background-color 0.3s' }}>
       {/* Sidebar */}
       <aside style={{ width: '250px', backgroundColor: 'var(--color-primary-dark)', padding: '2rem 1rem', color: 'white' }}>
-        <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'white' }}>Admin Panel</h2>
-        <p style={{ fontSize: '0.9rem', color: 'var(--color-accent)', marginBottom: '3rem' }}>{user.nombre}</p>
-
+        <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'white' }}>
+          {isAdmin ? 'Admin Panel' : 'Panel de Estudiante'}
+        </h2>
+        <p style={{ fontSize: '0.9rem', color: 'var(--color-accent)', marginBottom: '3rem' }}>
+          {user.nombre} ({user.rol})
+        </p>
+ 
         <nav>
-          <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
-            🏠 Gestión de Programas
-          </Link>
-          <Link to="/dashboard/inscripciones" style={getLinkStyle('/dashboard/inscripciones')}>
-            📋 Registro Histórico
-          </Link>
-          <Link to="/dashboard/ia-predictiva" style={getLinkStyle('/dashboard/ia-predictiva')}>
-            🧠 IA y Demanda
-          </Link>
+          {isAdmin ? (
+            <>
+              <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
+                🏠 Gestión de Programas
+              </Link>
+              <Link to="/dashboard/inscripciones" style={getLinkStyle('/dashboard/inscripciones')}>
+                📋 Registro Histórico
+              </Link>
+              <Link to="/dashboard/ia-predictiva" style={getLinkStyle('/dashboard/ia-predictiva')}>
+                🧠 IA y Demanda
+              </Link>
+              <Link to="/dashboard/mailing" style={getLinkStyle('/dashboard/mailing')}>
+                📧 Email Marketing
+              </Link>
+              <Link to="/dashboard/seguridad" style={getLinkStyle('/dashboard/seguridad')}>
+                🛡️ Seguridad (2FA)
+              </Link>
+            </>
+          ) : (
+            <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
+              🎓 Mis Cursos
+            </Link>
+          )}
         </nav>
       </aside>
-
+ 
       {/* Main Content */}
       <section style={{ flex: 1, padding: '2rem', overflowX: 'auto' }}>
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '2rem', minHeight: '60vh', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <Outlet />
+        <div style={{ 
+          backgroundColor: 'var(--panel-bg)', 
+          borderRadius: '12px', 
+          padding: '2rem', 
+          minHeight: '60vh', 
+          boxShadow: '0 4px 6px var(--glass-shadow)',
+          transition: 'background-color 0.3s, box-shadow 0.3s'
+        }}>
+          {isAdmin ? (
+            <Outlet />
+          ) : (
+            <div style={{ textAlign: 'center', marginTop: '4rem' }}>
+              <h2 style={{ color: 'var(--text-main)', marginBottom: '1rem' }}>¡Bienvenido a tu Espacio de Aprendizaje!</h2>
+              <p style={{ color: 'var(--text-muted)' }}>Próximamente podrás ver tus cursos inscritos y materiales de estudio aquí.</p>
+            </div>
+          )}
         </div>
       </section>
     </div>

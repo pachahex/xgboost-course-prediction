@@ -6,10 +6,13 @@ import Home from './pages/Home';
 import Cursos from './pages/Cursos';
 import Diplomados from './pages/Diplomados';
 import Login from './pages/Login';
+import Registro from './pages/Registro';
 import DashboardLayout from './pages/dashboard/DashboardLayout';
 import Inscripciones from './pages/dashboard/Inscripciones';
 import IAPredictiva from './pages/dashboard/IAPredictiva';
 import GestorProgramas from './pages/dashboard/GestorProgramas';
+import Mailing from './pages/dashboard/Mailing';
+import Seguridad from './pages/dashboard/Seguridad';
 import './index.css';
 
 // Componente simple para proteger rutas
@@ -35,8 +38,9 @@ function App() {
             <Route path="/cursos" element={<Cursos />} />
             <Route path="/diplomados" element={<Diplomados />} />
             
-            {/* Ruta Login */}
+            {/* Ruta Login y Registro */}
             <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
             
             {/* Rutas Privadas */}
             <Route path="/dashboard" element={
@@ -47,6 +51,8 @@ function App() {
               <Route index element={<GestorProgramas />} />
               <Route path="inscripciones" element={<Inscripciones />} />
               <Route path="ia-predictiva" element={<IAPredictiva />} />
+              <Route path="mailing" element={<Mailing />} />
+              <Route path="seguridad" element={<Seguridad />} />
             </Route>
             
             {/* Fallback */}

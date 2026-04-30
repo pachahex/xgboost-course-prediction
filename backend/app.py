@@ -8,6 +8,10 @@ from db import get_db_connection
 import os
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
+import pyotp
+import qrcode
+import base64
+from io import BytesIO
 
 app = Flask(__name__)
 # Configuracion de Archivos
@@ -45,8 +49,40 @@ def admin_required(f):
     return wrap
 
 # ==========================================
-# RUTAS DE AUTENTICACIÓN
+# RUTAS DE AUTENTICACIÓN Y REGISTRO
 # ==========================================
+
+@app.route('/api/registro', methods=['POST'])
+def registro():
+    """Registro público de Estudiantes"""
+    data = request.json
+    nombre = data.get('nombre_completo')
+    correo = data.get('correo')
+    password = data.get('password')
+    
+    if not all([nombre, correo, password]):
+        return jsonify({"error": "Todos los campos son obligatorios."}), 400
+        
+    with get_db_connection() as conn:
+        with conn.begin():
+            # Buscar rol Estudiante
+            rol_id = conn.execute(text("SELECT id FROM roles WHERE nombre = 'Estudiante'")).scalar()
+            if not rol_id:
+                return jsonify({"error": "Rol Estudiante no configurado en BD."}), 500
+                
+            # Verificar si correo existe
+            exists = conn.execute(text("SELECT id FROM usuarios WHERE correo = :correo"), {"correo": correo}).scalar()
+            if exists:
+                return jsonify({"error": "El correo ya está registrado."}), 400
+                
+            hash_pwd = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            conn.execute(text("""
+                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena)
+                VALUES (:rid, :nombre, :correo, :pwd)
+            """), {"rid": rol_id, "nombre": nombre, "correo": correo, "pwd": hash_pwd})
+            
+    return jsonify({"message": "Registro exitoso. Ya puedes iniciar sesión."}), 201
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -59,7 +95,7 @@ def login():
         
     with get_db_connection() as conn:
         res = conn.execute(text("""
-            SELECT u.id, u.hash_contrasena, r.nombre as rol_nombre, u.nombre_completo 
+            SELECT u.id, u.hash_contrasena, r.nombre as rol_nombre, u.nombre_completo, u.totp_enabled 
             FROM usuarios u
             JOIN roles r ON u.rol_id = r.id
             WHERE u.correo = :correo
@@ -68,11 +104,26 @@ def login():
     if not res:
         return jsonify({"error": "Credenciales inválidas."}), 401
         
-    user_id, hash_bd, rol_nombre, nombre = res
+    user_id, hash_bd, rol_nombre, nombre, totp_enabled = res
     
     # Validar contraseña bcrypt
     if bcrypt.checkpw(password.encode('utf-8'), hash_bd.encode('utf-8')):
-        # Generar Token JWT con vigencia de 8 horas
+        
+        # Si 2FA está activado, retornamos un token temporal y requires_2fa
+        if totp_enabled:
+            temp_payload = {
+                "sub": user_id,
+                "temp": True,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+            }
+            temp_token = jwt.encode(temp_payload, SECRET_KEY, algorithm="HS256")
+            return jsonify({
+                "requires_2fa": True,
+                "temp_token": temp_token,
+                "message": "Requiere verificación de 2 pasos."
+            }), 200
+
+        # Si no tiene 2FA, procedemos con el login normal
         payload = {
             "sub": user_id,
             "nombre": nombre,
@@ -81,7 +132,6 @@ def login():
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
         
-        # Respuesta empaquetada con cookie HTTP-Only para mitigar exposición a XSS en Frontend
         resp = make_response(jsonify({
             "message": "Login exitoso",
             "user": {"nombre": nombre, "rol": rol_nombre}
@@ -90,13 +140,76 @@ def login():
         resp.set_cookie(
             'access_token', 
             token, 
-            httponly=True,   # El JavaScript del Frontend no puede leerla (protección XSS)
-            secure=False,    # Pasar a True en Producción (HTTPS)
-            samesite='Lax'   # Protección básica CSRF
+            httponly=True,
+            secure=False,
+            samesite='Lax'
         )
         return resp, 200
     else:
         return jsonify({"error": "Credenciales inválidas."}), 401
+
+@app.route('/api/login/verify-2fa', methods=['POST'])
+def verify_2fa():
+    """Verifica el token temporal y el código TOTP para emitir la cookie final"""
+    data = request.json
+    temp_token = data.get('temp_token')
+    totp_code = data.get('totp_code')
+    
+    if not temp_token or not totp_code:
+        return jsonify({"error": "Faltan datos de verificación."}), 400
+        
+    try:
+        decoded = jwt.decode(temp_token, SECRET_KEY, algorithms=["HS256"])
+        if not decoded.get('temp'):
+            return jsonify({"error": "Token inválido para esta operación."}), 401
+            
+        user_id = decoded['sub']
+        
+        with get_db_connection() as conn:
+            res = conn.execute(text("""
+                SELECT u.totp_secret, u.nombre_completo, r.nombre as rol_nombre
+                FROM usuarios u
+                JOIN roles r ON u.rol_id = r.id
+                WHERE u.id = :uid
+            """), {"uid": user_id}).fetchone()
+            
+        if not res or not res.totp_secret:
+            return jsonify({"error": "Configuración 2FA inválida."}), 400
+            
+        totp_secret, nombre, rol_nombre = res
+        
+        # Verificar código con pyotp (valid_window=2 para tolerar desfases de tiempo en Docker)
+        totp = pyotp.TOTP(totp_secret)
+        if totp.verify(totp_code, valid_window=2):
+            # Emitir cookie final
+            payload = {
+                "sub": user_id,
+                "nombre": nombre,
+                "rol": rol_nombre,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+            }
+            token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+            
+            resp = make_response(jsonify({
+                "message": "Login exitoso",
+                "user": {"nombre": nombre, "rol": rol_nombre}
+            }))
+            
+            resp.set_cookie(
+                'access_token', 
+                token, 
+                httponly=True,
+                secure=False,
+                samesite='Lax'
+            )
+            return resp, 200
+        else:
+            return jsonify({"error": "Código 2FA incorrecto."}), 401
+            
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "El tiempo para ingresar el código expiró."}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Token temporal inválido."}), 401
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -186,7 +299,7 @@ def serve_upload(filename):
 
 @app.route('/api/suscribir', methods=['POST'])
 def suscribir():
-    """Captura de leads/correos del footer asegurando tener un rol genérico (Ej. Suscriptor)"""
+    """Captura de leads/correos del footer asegurando guardarlos en la tabla de marketing aislada"""
     data = request.json
     correo = data.get('correo')
     
@@ -195,23 +308,12 @@ def suscribir():
         
     with get_db_connection() as conn:
         with conn.begin():
-            # Buscar rol "Suscriptor"
-            rol_id = conn.execute(text("SELECT id FROM roles WHERE nombre = 'Suscriptor'")).scalar()
-            if not rol_id:
-                # Si no existe, usamos cualquier otro o fallamos controladamente (en tu caso debería estar creado por el import_data)
-                return jsonify({"error": "Rol suscriptor no configurado en BD."}), 500
-                
-            # Intento de inserción
             try:
-                # Utilizamos una contraseña aleatoria descartable o "N/A" si no tienen cuenta para login
-                # O podríamos permitir hash_contrasena nulo para suscriptores. Para el MVP usaremos un dummy.
-                pwd_placeholder = bcrypt.hashpw(os.urandom(12).hex().encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                
                 conn.execute(text("""
-                    INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena)
-                    VALUES (:rid, 'Suscriptor Pendiente', :correo, :pwd)
+                    INSERT INTO suscriptores (correo)
+                    VALUES (:correo)
                     ON CONFLICT (correo) DO NOTHING
-                """), {"rid": rol_id, "correo": correo, "pwd": pwd_placeholder})
+                """), {"correo": correo})
                 
                 return jsonify({"message": "Te has suscrito con éxito al boletín."}), 201
             except Exception as e:
@@ -399,6 +501,93 @@ def get_predicciones():
             
     # Invertir para que vengan cronológicamente en los gráficos de Recharts
     return jsonify(predicciones[::-1])
+
+@app.route('/api/admin/seguridad/2fa/setup', methods=['GET'])
+@admin_required
+def setup_2fa():
+    """Genera un nuevo TOTP secret y un código QR en Base64 para Google Authenticator"""
+    user_id = request.user_info['sub']
+    
+    # Generar un nuevo secreto
+    secret = pyotp.random_base32()
+    
+    with get_db_connection() as conn:
+        with conn.begin():
+            # Guardarlo en el usuario (aún no activado)
+            conn.execute(text("UPDATE usuarios SET totp_secret = :s WHERE id = :uid"), {"s": secret, "uid": user_id})
+            # Obtener el correo
+            correo = conn.execute(text("SELECT correo FROM usuarios WHERE id = :uid"), {"uid": user_id}).scalar()
+            
+    # Generar URL de aprovisionamiento
+    totp_auth_url = pyotp.totp.TOTP(secret).provisioning_uri(name=correo, issuer_name="Autopoiesis")
+    
+    # Generar QR
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(totp_auth_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
+    return jsonify({
+        "secret": secret,
+        "qr_code": f"data:image/png;base64,{qr_base64}"
+    })
+
+@app.route('/api/admin/seguridad/2fa/verify', methods=['POST'])
+@admin_required
+def verify_2fa_setup():
+    """Verifica el primer código para activar definitivamente el 2FA en la cuenta"""
+    user_id = request.user_info['sub']
+    code = request.json.get('code')
+    
+    with get_db_connection() as conn:
+        secret = conn.execute(text("SELECT totp_secret FROM usuarios WHERE id = :uid"), {"uid": user_id}).scalar()
+        
+        if not secret:
+            return jsonify({"error": "No hay un código TOTP configurado para probar."}), 400
+            
+        totp = pyotp.TOTP(secret)
+        if totp.verify(code, valid_window=2):
+            conn.execute(text("UPDATE usuarios SET totp_enabled = true WHERE id = :uid"), {"uid": user_id})
+            conn.commit()
+            return jsonify({"message": "Autenticación de 2 Factores activada con éxito."})
+        else:
+            return jsonify({"error": "Código incorrecto."}), 400
+
+@app.route('/api/admin/mailing/send', methods=['POST'])
+@admin_required
+def send_mailing():
+    """Simulación de envío masivo de correos a suscriptores"""
+    data = request.json
+    asunto = data.get('asunto')
+    mensaje = data.get('mensaje')
+    
+    if not asunto or not mensaje:
+        return jsonify({"error": "Asunto y mensaje son requeridos."}), 400
+        
+    with get_db_connection() as conn:
+        suscriptores = conn.execute(text("SELECT correo FROM suscriptores WHERE activo = true")).fetchall()
+        
+    total_enviados = len(suscriptores)
+    
+    # Aquí iría la integración con SMTP, SendGrid, o AWS SES
+    # Ejemplo: mailer.send_mass(asunto, mensaje, [s.correo for s in suscriptores])
+    
+    # Para la simulación, simplemente imprimimos en la terminal del backend
+    print(f"\n[MAILING SIMULATION] Preparando envío a {total_enviados} suscriptores...")
+    print(f"[MAILING SIMULATION] Asunto: {asunto}")
+    print(f"[MAILING SIMULATION] Mensaje fragmento: {mensaje[:50]}...")
+    for s in suscriptores:
+        print(f" -> Correo enviado a: {s[0]}")
+    print("[MAILING SIMULATION] Envío finalizado.\n")
+    
+    return jsonify({
+        "message": "Campaña enviada exitosamente.",
+        "destinatarios": total_enviados
+    })
 
 if __name__ == '__main__':
     # Habilitamos Flask para escuchar peticiones de Docker u host externo

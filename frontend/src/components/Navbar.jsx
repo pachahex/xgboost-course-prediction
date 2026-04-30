@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
+import ThemeToggle from './ThemeToggle';
 const Navbar = () => {
   const navigate = useNavigate();
   const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
@@ -21,11 +21,13 @@ const Navbar = () => {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '1rem 2rem',
-    backgroundColor: '#fff',
+    backgroundColor: 'var(--bg-page)',
     boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+    borderBottom: '1px solid var(--glass-border)',
     position: 'sticky',
     top: 0,
-    zIndex: 1000
+    zIndex: 1000,
+    transition: 'background-color 0.3s, border-color 0.3s'
   };
 
   const logoStyle = {
@@ -58,10 +60,16 @@ const Navbar = () => {
             <button onClick={handleLogout} style={{backgroundColor: '#e74c3c'}}>Salir</button>
           </>
         ) : (
-          <Link to="/login">
-            <button style={{backgroundColor: 'var(--color-primary)'}}>Acceso Sistema</button>
-          </Link>
+          <>
+            <Link to="/login" style={{textDecoration: 'none', color: 'var(--text-main)', fontWeight: 'bold'}}>
+              Iniciar Sesión
+            </Link>
+            <Link to="/registro">
+              <button style={{backgroundColor: 'var(--color-primary)', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '4px', color: 'white', cursor: 'pointer', fontWeight: 'bold'}}>Regístrate</button>
+            </Link>
+          </>
         )}
+        <ThemeToggle />
       </div>
     </nav>
   );

@@ -47,11 +47,20 @@ CREATE TABLE usuarios (
     nombre_completo VARCHAR(150) NOT NULL,
     correo VARCHAR(150) UNIQUE NOT NULL,
     hash_contrasena VARCHAR(255) NOT NULL,
+    totp_secret VARCHAR(50),
+    totp_enabled BOOLEAN DEFAULT false,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_usuario_rol FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT
     -- Fundamento: Integridad Referencial mediante FK (Llave Foránea)[cite: 4]. 
     -- 'ON DELETE RESTRICT' aplica el principio de prevención de datos huérfanos[cite: 4]. 
     -- No se puede borrar un rol si existen usuarios asignados a él[cite: 4].
+);
+
+CREATE TABLE suscriptores (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    correo VARCHAR(150) NOT NULL UNIQUE,
+    fecha_suscripcion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    activo BOOLEAN DEFAULT true
 );
 
 CREATE TABLE programas (
@@ -60,6 +69,9 @@ CREATE TABLE programas (
     tipo_servicio_id INT NOT NULL,
     nombre VARCHAR(200) NOT NULL,
     costo_oficial_bs DECIMAL(10, 2) NOT NULL,
+    imagen_url VARCHAR(255),
+    descripcion TEXT,
+    activo BOOLEAN DEFAULT true,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_programa_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT,
     CONSTRAINT fk_programa_servicio FOREIGN KEY (tipo_servicio_id) REFERENCES tipos_servicio(id) ON DELETE RESTRICT

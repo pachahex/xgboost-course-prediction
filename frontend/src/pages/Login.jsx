@@ -5,6 +5,9 @@ import { fetchApi } from '../api';
 const Login = () => {
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [step, setStep] = useState(1);
+  const [tempToken, setTempToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -20,13 +23,37 @@ const Login = () => {
         body: JSON.stringify({ correo, password })
       });
       
-      // Si llega aqui, el JSON fue exitoso y la cookie HTTP-Only fue colocada por Flask
-      sessionStorage.setItem('isLoggedIn', 'true');
-      sessionStorage.setItem('user', JSON.stringify(res.user));
-      
-      navigate('/dashboard');
+      if (res.requires_2fa) {
+        setTempToken(res.temp_token);
+        setStep(2);
+      } else {
+        sessionStorage.setItem('isLoggedIn', 'true');
+        sessionStorage.setItem('user', JSON.stringify(res.user));
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handle2FA = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    
+    try {
+      const res = await fetchApi('/login/verify-2fa', {
+        method: 'POST',
+        body: JSON.stringify({ temp_token: tempToken, totp_code: totpCode })
+      });
+      
+      sessionStorage.setItem('isLoggedIn', 'true');
+      sessionStorage.setItem('user', JSON.stringify(res.user));
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Código incorrecto');
     } finally {
       setLoading(false);
     }
@@ -63,46 +90,86 @@ const Login = () => {
         
         {error && <div style={{ backgroundColor: 'rgba(231, 76, 60, 0.2)', color: '#ffb8b8', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
         
-        <form onSubmit={handleLogin} style={formStyle}>
-          <div>
-            <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Correo Electrónico</label>
-            <input 
-              type="email" 
-              value={correo} 
-              onChange={(e) => setCorreo(e.target.value)} 
-              required
-              style={inputStyle}
-              placeholder="admin@autopoiesis.com"
-              autoComplete="username"
-            />
-          </div>
-          <div>
-            <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Contraseña</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              required
-              style={inputStyle}
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{ 
-              backgroundColor: 'var(--color-accent)', 
-              padding: '1rem', 
-              fontSize: '1.1rem', 
-              marginTop: '1rem',
-              opacity: loading ? 0.7 : 1
-            }}
-          >
-            {loading ? 'Autenticando...' : 'Iniciar Sesión'}
-          </button>
-        </form>
+        {step === 1 ? (
+          <form onSubmit={handleLogin} style={formStyle}>
+            <div>
+              <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Correo Electrónico</label>
+              <input 
+                type="email" 
+                value={correo} 
+                onChange={(e) => setCorreo(e.target.value)} 
+                required
+                style={inputStyle}
+                placeholder="admin@autopoiesis.com"
+                autoComplete="username"
+              />
+            </div>
+            <div>
+              <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Contraseña</label>
+              <input 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required
+                style={inputStyle}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+            </div>
+            
+            <button 
+              type="submit" 
+              disabled={loading}
+              style={{ 
+                backgroundColor: 'var(--color-accent)', 
+                padding: '1rem', 
+                fontSize: '1.1rem', 
+                marginTop: '1rem',
+                opacity: loading ? 0.7 : 1,
+                border: 'none',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px'
+              }}
+            >
+              {loading ? 'Autenticando...' : 'Iniciar Sesión'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handle2FA} style={formStyle}>
+            <p style={{ color: '#ccc', textAlign: 'center' }}>Ingresa el código de 6 dígitos de tu aplicación Google Authenticator.</p>
+            <div>
+              <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Código 2FA</label>
+              <input 
+                type="text" 
+                value={totpCode} 
+                onChange={(e) => setTotpCode(e.target.value)} 
+                required
+                style={{...inputStyle, textAlign: 'center', letterSpacing: '0.5rem', fontSize: '1.5rem'}}
+                placeholder="123456"
+                maxLength="6"
+              />
+            </div>
+            
+            <button 
+              type="submit" 
+              disabled={loading}
+              style={{ 
+                backgroundColor: 'var(--color-primary)', 
+                padding: '1rem', 
+                fontSize: '1.1rem', 
+                marginTop: '1rem',
+                opacity: loading ? 0.7 : 1,
+                border: 'none',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px'
+              }}
+            >
+              {loading ? 'Verificando...' : 'Verificar'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

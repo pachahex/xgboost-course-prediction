@@ -3,23 +3,37 @@
   line-height: 1.5;
   font-weight: 400;
 
-  /* Colores principales de la marca (Academia Autopoiesis) */
-  --color-primary: #7f2b80; /* Morado/Púrpura principal */
+  /* Colores de marca constantes */
+  --color-primary: #7f2b80;
   --color-primary-dark: #5a1c5b;
-  --color-accent: #038fba;  /* Cian/Azul de acento */
+  --color-accent: #038fba;
   --color-accent-light: #4bc0e3;
-  --color-bg-dark: #121212;
-  --color-bg-glass: rgba(255, 255, 255, 0.1);
-  --color-text-main: #213547;
-  --color-text-light: #ffffff;
 
-  color: var(--color-text-main);
-  background-color: #f9f9f9;
+  /* Variables dinámicas (Modo Claro por defecto) */
+  --bg-page: #f9f9f9;
+  --text-main: #213547;
+  --text-muted: #666;
+  --panel-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: rgba(127, 43, 128, 0.15);
+
+  color: var(--text-main);
+  background-color: var(--bg-page);
+  transition: background-color 0.3s, color 0.3s;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+:root.dark {
+  --bg-page: #0f0d1a; /* Un morado muy oscuro casi negro */
+  --text-main: #f0f0f0;
+  --text-muted: #aaa;
+  --panel-bg: rgba(30, 26, 59, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.4);
 }
 
 body {
@@ -63,12 +77,14 @@ button:hover {
 
 /* Glassmorphism Classes */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--panel-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px 0 rgba(127, 43, 128, 0.15);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
   border-radius: 12px;
+  color: var(--text-main);
+  transition: background 0.3s, border 0.3s, box-shadow 0.3s;
 }
 
 .glass-panel-dark {

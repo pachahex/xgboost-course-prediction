@@ -33,7 +33,9 @@ services:
       PGTZ: ${TZ:-America/La_Paz}
       DB_TIMEZONE: ${TZ:-America/La_Paz}
     volumes:
+      - ./backend:/app
       - ./backend/uploads:/app/uploads
+    command: python app.py
     # Fundamento: Control de Dependencia Expandido.
     # Se cambia la lista simple por un diccionario de configuración. 
     # Esto permite que el backend espere específicamente al estado 'healthy' del servicio 'db'.
@@ -44,7 +46,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      target: prod
+      target: dev
       args:
         VITE_API_URL: /api
     ports:
@@ -52,6 +54,10 @@ services:
     restart: unless-stopped
     environment:
       TZ: ${TZ:-America/La_Paz}
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       backend:
         condition: service_started

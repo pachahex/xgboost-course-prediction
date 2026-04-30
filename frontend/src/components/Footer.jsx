@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { fetchApi } from '../api';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -45,8 +46,11 @@ const Footer = () => {
           {status && <p style={{ fontSize: '0.9rem', marginTop: '0.5rem', color: status.includes('Error') ? '#ff6b6b' : '#51cf66' }}>{status}</p>}
         </div>
       </div>
-      <div style={{ textAlign: 'center', marginTop: '3rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', color: '#999' }}>
-        &copy; {new Date().getFullYear()} Academia Autopoiesis. Todos los derechos reservados.
+      <div style={{ textAlign: 'center', marginTop: '3rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', color: '#999', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+        <span>&copy; {new Date().getFullYear()} Academia Autopoiesis. Todos los derechos reservados.</span>
+        <Link to="/login" style={{ color: '#666', textDecoration: 'none', fontSize: '0.8rem', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = 'var(--color-accent)'} onMouseOut={(e) => e.target.style.color = '#666'}>
+          Acceso Administrador
+        </Link>
       </div>
     </footer>
   );
