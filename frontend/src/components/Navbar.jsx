@@ -1,13 +1,15 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
+import { Home, BookOpen, GraduationCap, LayoutDashboard, LogOut, LogIn, UserPlus } from 'lucide-react';
+import logo from '../assets/logo.svg';
+
 const Navbar = () => {
   const navigate = useNavigate();
   const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
 
   const handleLogout = async () => {
     try {
-      // In a real app we'd call /api/logout to clear the HTTP-Only cookie too
       sessionStorage.removeItem('isLoggedIn');
       sessionStorage.removeItem('user');
       navigate('/login');
@@ -20,7 +22,7 @@ const Navbar = () => {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '1rem 2rem',
+    padding: '0.8rem 2rem',
     backgroundColor: 'var(--bg-page)',
     boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
     borderBottom: '1px solid var(--glass-border)',
@@ -30,46 +32,97 @@ const Navbar = () => {
     transition: 'background-color 0.3s, border-color 0.3s'
   };
 
-  const logoStyle = {
+  const logoContainerStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.8rem',
+    textDecoration: 'none'
+  };
+
+  const logoImgStyle = {
+    height: '35px',
+    width: 'auto'
+  };
+
+  const logoTextStyle = {
     color: 'var(--color-primary)',
     fontWeight: 800,
-    fontSize: '1.5rem',
+    fontSize: '1.4rem',
     margin: 0
   };
 
   const linksStyle = {
     display: 'flex',
-    gap: '2rem',
+    gap: '1.5rem',
     alignItems: 'center'
+  };
+
+  const linkItemStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+    textDecoration: 'none',
+    color: 'var(--text-main)',
+    fontSize: '0.95rem',
+    fontWeight: '500',
+    transition: 'color 0.2s'
+  };
+
+  const buttonStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.5rem 1rem',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    border: 'none',
+    transition: 'transform 0.2s, opacity 0.2s'
   };
 
   return (
     <nav style={navStyle}>
-      <Link to="/" style={{textDecoration: 'none'}}>
-        <h1 style={logoStyle}>Autopoiesis</h1>
+      <Link to="/" style={logoContainerStyle}>
+        <img src={logo} alt="Autopoiesis Logo" style={logoImgStyle} />
+        <h1 style={logoTextStyle}>Autopoiesis</h1>
       </Link>
       
       <div style={linksStyle}>
-        <Link to="/">Inicio</Link>
-        <Link to="/cursos">Cursos</Link>
-        <Link to="/diplomados">Diplomados</Link>
+        <Link to="/" style={linkItemStyle}><Home size={18} /> Inicio</Link>
+        <Link to="/cursos" style={linkItemStyle}><BookOpen size={18} /> Cursos</Link>
+        <Link to="/diplomados" style={linkItemStyle}><GraduationCap size={18} /> Diplomados</Link>
         
         {isLoggedIn ? (
           <>
-            <Link to="/dashboard">Panel Admin</Link>
-            <button onClick={handleLogout} style={{backgroundColor: '#e74c3c'}}>Salir</button>
+            <Link to="/dashboard" style={linkItemStyle}><LayoutDashboard size={18} /> Panel</Link>
+            <button 
+              onClick={handleLogout} 
+              style={{...buttonStyle, backgroundColor: '#e74c3c', color: 'white'}}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              <LogOut size={18} /> Salir
+            </button>
           </>
         ) : (
           <>
-            <Link to="/login" style={{textDecoration: 'none', color: 'var(--text-main)', fontWeight: 'bold'}}>
-              Iniciar Sesión
+            <Link to="/login" style={linkItemStyle}>
+              <LogIn size={18} /> Ingresar
             </Link>
-            <Link to="/registro">
-              <button style={{backgroundColor: 'var(--color-primary)', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '4px', color: 'white', cursor: 'pointer', fontWeight: 'bold'}}>Regístrate</button>
+            <Link to="/registro" style={{textDecoration: 'none'}}>
+              <button 
+                style={{...buttonStyle, backgroundColor: 'var(--color-primary)', color: 'white'}}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <UserPlus size={18} /> Regístrate
+              </button>
             </Link>
           </>
         )}
-        <ThemeToggle />
+        <div style={{ marginLeft: '0.5rem', borderLeft: '1px solid var(--glass-border)', paddingLeft: '1rem' }}>
+          <ThemeToggle />
+        </div>
       </div>
     </nav>
   );

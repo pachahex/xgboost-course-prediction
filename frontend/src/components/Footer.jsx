@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { fetchApi } from '../api';
 import { Link } from 'react-router-dom';
+import { Mail, Send } from 'lucide-react';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -34,14 +35,19 @@ const Footer = () => {
           <h3 style={{ color: 'var(--color-accent)' }}>Boletín Informativo</h3>
           <p style={{ color: '#ccc' }}>Suscríbete para recibir noticias, cursos y diplomados de primera mano.</p>
           <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '10px' }}>
-            <input 
-              type="email" 
-              placeholder="tu@correo.com" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ padding: '0.8rem', borderRadius: '4px', border: 'none', flex: 1, maxWidth: '250px' }}
-            />
-            <button type="submit" style={{ backgroundColor: 'var(--color-accent)' }}>Suscribir</button>
+            <div style={{ position: 'relative', flex: 1, maxWidth: '250px' }}>
+              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+              <input 
+                type="email" 
+                placeholder="tu@correo.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ padding: '0.8rem 0.8rem 0.8rem 2.5rem', borderRadius: '4px', border: 'none', width: '100%' }}
+              />
+            </div>
+            <button type="submit" style={{ backgroundColor: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 1.2rem' }}>
+              <Send size={18} /> Suscribir
+            </button>
           </form>
           {status && <p style={{ fontSize: '0.9rem', marginTop: '0.5rem', color: status.includes('Error') ? '#ff6b6b' : '#51cf66' }}>{status}</p>}
         </div>

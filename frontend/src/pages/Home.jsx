@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchApi } from '../api';
+import { Brain, Scale, Code, Rocket } from 'lucide-react';
 
 const Home = () => {
   const [stats, setStats] = useState([]);
@@ -72,17 +73,26 @@ const Home = () => {
         <h2 style={{ textAlign: 'center', fontSize: '2.5rem', marginBottom: '3rem', color: 'var(--color-primary)' }}>Áreas de Estudio</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
           
-          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center' }}>
+          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ backgroundColor: 'rgba(52, 152, 219, 0.1)', padding: '1rem', borderRadius: '50%', color: 'var(--color-accent)' }}>
+              <Brain size={40} />
+            </div>
             <h3>Psicología</h3>
             <p style={{ color: 'var(--text-muted)' }}>Programas como Terapia Cognitivo Conductual y Dependencia Emocional.</p>
           </div>
           
-          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center' }}>
+          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ backgroundColor: 'rgba(46, 204, 113, 0.1)', padding: '1rem', borderRadius: '50%', color: 'var(--color-primary)' }}>
+              <Scale size={40} />
+            </div>
             <h3>Derecho</h3>
             <p style={{ color: 'var(--text-muted)' }}>Especializaciones en Litigación y Derecho de Familia.</p>
           </div>
  
-          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center' }}>
+          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ backgroundColor: 'rgba(155, 89, 182, 0.1)', padding: '1rem', borderRadius: '50%', color: '#9b59b6' }}>
+              <Code size={40} />
+            </div>
             <h3>Tecnología y Educación</h3>
             <p style={{ color: 'var(--text-muted)' }}>Explora Tecnologías Web y Neuropedagogía Aplicada.</p>
           </div>

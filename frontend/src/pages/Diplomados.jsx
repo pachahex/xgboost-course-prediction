@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../api';
+import { Info } from 'lucide-react';
 
 const Diplomados = () => {
   const [diplomados, setDiplomados] = useState([]);
@@ -40,7 +41,9 @@ const Diplomados = () => {
               </p>
               <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--color-accent)', fontWeight: 'bold', fontSize: '1.2rem' }}>{d.costo} Bs.</span>
-                <button style={{ backgroundColor: 'var(--color-primary)' }}>Solicitar info</button>
+                <button style={{ backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: '6px', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
+                  <Info size={18} /> Solicitar info
+                </button>
               </div>
             </div>
           ))}

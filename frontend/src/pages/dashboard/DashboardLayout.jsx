@@ -1,12 +1,15 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap } from 'lucide-react';
 
 const DashboardLayout = () => {
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const location = useLocation();
 
   const getLinkStyle = (path) => ({
-    display: 'block',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.8rem',
     padding: '1rem',
     textDecoration: 'none',
     color: location.pathname === path ? 'var(--color-text-light)' : '#aaa',
@@ -34,24 +37,24 @@ const DashboardLayout = () => {
           {isAdmin ? (
             <>
               <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
-                🏠 Gestión de Programas
+                <Home size={18} /> Gestión de Programas
               </Link>
               <Link to="/dashboard/inscripciones" style={getLinkStyle('/dashboard/inscripciones')}>
-                📋 Registro Histórico
+                <ClipboardList size={18} /> Registro Histórico
               </Link>
               <Link to="/dashboard/ia-predictiva" style={getLinkStyle('/dashboard/ia-predictiva')}>
-                🧠 IA y Demanda
+                <Brain size={18} /> IA y Demanda
               </Link>
               <Link to="/dashboard/mailing" style={getLinkStyle('/dashboard/mailing')}>
-                📧 Email Marketing
+                <Mail size={18} /> Email Marketing
               </Link>
               <Link to="/dashboard/seguridad" style={getLinkStyle('/dashboard/seguridad')}>
-                🛡️ Seguridad (2FA)
+                <ShieldCheck size={18} /> Seguridad (2FA)
               </Link>
             </>
           ) : (
             <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
-              🎓 Mis Cursos
+              <GraduationCap size={18} /> Mis Cursos
             </Link>
           )}
         </nav>
