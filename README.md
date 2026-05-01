@@ -64,42 +64,6 @@ Todo el módulo de control de acceso está sellado por **JSON Web Tokens (JWT)**
 
 ---
 
-## 🚀 Tutorial: Pruebas Backend usando Postman
-
-A continuación se describen los pasos para validar localmente que tu arquitectura está operando sin contratiempos usando la herramienta de Postman.
-
-### 1. Iniciar Sesión (Obtener Acceso)
-1. Abre Postman y crea una nueva pestaña. Configura el verbo HTTP a **POST**.
-2. Escribe la URL de tu contenedor montado: `http://localhost:5000/api/login`
-3. En la sección principal, ve a la pestaña **`Body`**, elige **`raw`** y en el tipo desplegable a la derecha selecciona **`JSON`**.
-4. Pega el siguiente payload (Correspondiente al usuario Semilla administrador insertado vía el script ETL):
-   ```json
-   {
-       "correo": "admin@autopoiesis.com",
-       "password": "admin123"
-   }
-   ```
-5. Haz clic en **Send**.
-6. **Verificación:** Deberías ver un "Login exitoso" con estado `200 OK`. 
-   > Si vas a la pestaña **`Cookies`** en la ventana de respuesta de Postman, verás que el servidor te ha otorgado un `access_token` incrustado como *HttpOnly*.
-
-### 2. Probando una Ruta Privada
-1. En una nueva pestaña, configura una petición para consultar los datos estudiantiles usando el verbo **GET**.
-2. URL: `http://localhost:5000/api/admin/inscripciones`
-3. Dale a **Send**. Postman automáticamente inyectará por debajo la Cookie que recibiste en el paso anterior y la verificación JWT te permitirá entrar, devolviendo el histórico masivo extraído en la importación.
-
-### 3. Simulando el Alta de un Prospecto (Público)
-1. Nuevo Request de tipo **POST** apuntando hacia `http://localhost:5000/api/suscribir`.
-2. Estructura de nuevo el Body como **JSON**:
-   ```json
-   {
-       "correo": "analisis.futuro@autopoiesis.com"
-   }
-   ```
-3. Verifica que la consola te retorne `201 Created` y ve a tu explorador PgAdmin (puerto `5051`) para certificar que el contacto ha sido indexado orgánicamente.
-
----
-
 ## 🎨 Frontend y Experiencia de Usuario (Fase 3 Completada)
 
 La interfaz de usuario ha sido desarrollada con **React 18** y **Vite**, priorizando una estética moderna, fluida y coherente con la identidad visual de la Academia Autopoiesis.
@@ -124,65 +88,43 @@ Para acceder al sistema privado y visualizar el dashboard, utiliza los siguiente
 
 > **Nota:** El sistema utiliza cookies **HTTP-Only** para la sesión. Si el inicio de sesión es exitoso, serás redirigido automáticamente al panel de control.
 
+## 🚀 Primeros Pasos: Inicialización de Datos y IA
+
+Una vez que los contenedores estén corriendo por primera vez, la base de datos estará estructurada pero vacía. Debes ejecutar los siguientes comandos para poblar el sistema y activar las predicciones:
+
+### 1. Importar Datos Históricos (ETL)
+Puebla el sistema con roles, usuarios y más de 3,000 inscripciones reales para pruebas:
+```bash
+docker exec -it xgboost-course-prediction-backend-1 python import_data.py
+```
+*   **Credenciales resultantes:** `admin@autopoiesis.com` / `admin123`
+
+### 2. Entrenar el Modelo de IA (XGBoost + SHAP)
+Este script procesa los datos históricos, entrena el modelo predictivo y genera los valores de explicabilidad para el Dashboard:
+```bash
+docker exec -it xgboost-course-prediction-backend-1 python ml/train_model.py
+```
+
 ---
 
-## ⏸️ ¿Cómo Detener y Reanudar el Trabajo en Cualquier PC?
+## ⏸️ ¿Cómo Detener y Reanudar el Trabajo?
 
-Ya que este ecosistema está 100% contenerizado (Dockerizado), la portabilidad está garantizada universalmente sin importar si usas Windows, Mac o Linux.
+Ya que este ecosistema está 100% contenerizado, la portabilidad está garantizada universalmente.
 
-### Inicio Rápido (1 Comando)
-Con Docker Desktop encendido, desde la raíz del proyecto ejecuta:
-
+### Inicio Rápido (Recomendado)
 ```bash
 docker compose up -d --build
 ```
-
-Eso es todo. El proyecto ya está configurado para arrancar sin pasos extra usando valores por defecto.
-
-### Personalización Opcional con `.env`
-Si quieres cambiar puertos, credenciales o secretos en otra PC:
-
-1. Copia `.env.example` a `.env`.
-2. Edita solo los valores que necesites.
-3. Ejecuta el mismo comando:
-
-```bash
-docker compose up -d --build
-```
-
-> El proyecto usa `TZ=America/La_Paz` por defecto. Puedes ajustarlo en `.env` si fuera necesario.
-
-> Si ya tenías un volumen antiguo creado antes de esta corrección de zona horaria, ejecuta una sola vez:
-
-```bash
-Get-Content db/timezone_migration.sql | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U admin -d autopoiesis_db
-```
-
-### Para Detener el Sistema (Al finalizar tu jornada)
-No basta con cerrar la terminal. Para liberar los puertos y detener limpiamente las bases de datos y servidores, ejecuta en la raíz del proyecto:
-```bash
-docker compose down
-```
-*(Toda la data transaccional e histórica persistirá a salvo en el volumen inmutable de PostgreSQL `postgres_data`)*.
-
-### Para Reanudar o Desplegar en una Computadora Nueva
-1. Tienes que clonar o descargar este repositorio (y asegurarte de que Docker Desktop esté corriendo).
-2. Dirígete en tu terminal hasta la carpeta principal del proyecto.
-3. Ejecuta el modo estable (recomendado para cualquier PC):
-```bash
-docker compose up -d --build
-```
-> Este comando usa la configuración portable por defecto: frontend compilado y servido por Nginx, backend con Gunicorn y sin bind mounts del host.
 
 ### Modo Desarrollo (Hot Reload)
-Si quieres editar código y ver cambios en vivo, usa el archivo de override de desarrollo:
-
+Si planeas editar el código y ver los cambios en tiempo real:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
-Para detener el modo desarrollo:
-
+### Detener el Sistema
+Para liberar puertos y detener los servicios limpiamente:
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+docker compose down
 ```
+*(La data persistirá en el volumen `postgres_data` aunque detengas los contenedores).*
