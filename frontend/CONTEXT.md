@@ -50,6 +50,27 @@ Este documento sirve como la fuente de verdad para la identidad visual y lógica
 
 ---
 
+## 📱 Guía de Responsividad y Estructura Base
+
+Para mantener un proyecto escalable y adaptable a todos los dispositivos, nos regimos por el principio **Mobile-First**.
+
+### Breakpoints Oficiales (en `index.css`)
+- **Móvil (Por defecto)**: Base del diseño. Todo debe apilarse verticalmente a menos que se indique lo contrario.
+- **Tablet (`md`)**: `@media (min-width: 768px)`
+- **Desktop (`lg`)**: `@media (min-width: 1024px)`
+
+### Regla de Oro del Layout
+> [!WARNING]  
+> **Cero Estilos en Línea para Estructura**: Está estrictamente prohibido usar el atributo `style={{ display: 'flex', padding: '...', ... }}` para construir layouts en los componentes de React, ya que no soportan Media Queries. 
+
+Para la estructura, se DEBEN utilizar las **Clases Utilitarias Globales** definidas en `index.css`:
+- `.container`: Contenedor centralizado con ancho máximo adaptativo.
+- `.section-padding`: Paddings verticales estandarizados para separar secciones.
+- `.grid-responsive`: Cuadrícula auto-adaptable (ideal para tarjetas).
+- `.flex-stack`: Flexbox que es columna en móvil y fila en tablet/desktop.
+
+---
+
 ## 📝 Registro de Cambios Significativos (Log)
 
 | Fecha | Tipo | Descripción del Cambio | Razón |
@@ -58,6 +79,9 @@ Este documento sirve como la fuente de verdad para la identidad visual y lógica
 | 2026-05-01 | Doc | Creación de `CONTEXT.md`. | Mantener consistencia a largo plazo. |
 | 2026-05-01 | UI | Implementación de iconos en Navbar, Footer, Home, Cursos y Diplomados. | Branding potente y profesional. |
 | 2026-05-01 | Assets | Integración de nuevos logos (SVG/PNG). | Consistencia visual. |
+| 2026-05-02 | UI | Ajuste de ancho de inputs en formularios de Login y Registro al 100%. | Consistencia visual con botones. |
+| 2026-05-02 | UI | Reducción de padding superior en sección de Áreas de Estudio en Home. | Mejora de proporciones y flujo visual. |
+| 2026-05-02 | UI | Implementación de Pop-out Preview (imagen grande flotante) en hover. | Visualización de imágenes reales sin recortes. |
 
 ---
 

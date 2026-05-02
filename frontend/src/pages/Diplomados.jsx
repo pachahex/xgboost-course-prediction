@@ -22,18 +22,20 @@ const Diplomados = () => {
   }, []);
 
   return (
-    <div style={{ padding: '4rem 2rem', maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
+    <div className="container section-padding" style={{ textAlign: 'center' }}>
       <h1 style={{ color: 'var(--color-primary)' }}>Nuestros Diplomados</h1>
       <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '3rem' }}>
         Programas de posgrado de excelencia avalados internacionalmente.
       </p>
       
       {loading ? <p style={{ color: 'var(--text-main)' }}>Cargando catálogo...</p> : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+        <div className="grid-responsive">
           {diplomados.map(d => (
             <div key={d.id} className="glass-panel" style={{ padding: '3rem', textAlign: 'left', borderTop: '4px solid var(--color-primary)' }}>
               {d.imagen_url && (
-                <div style={{ width: '100%', height: '200px', backgroundImage: `url('http://localhost:5000${d.imagen_url}')`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '8px', marginBottom: '1.5rem' }}></div>
+                <div className="img-expand-container" style={{ height: '200px', marginBottom: '1.5rem' }}>
+                  <div className="img-expand" style={{ backgroundImage: `url('http://localhost:5000${d.imagen_url}')` }}></div>
+                </div>
               )}
               <h2 style={{ color: 'var(--color-primary-dark)' }}>{d.nombre}</h2>
               <p style={{ color: 'var(--text-main)', lineHeight: '1.6' }}>

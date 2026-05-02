@@ -35,11 +35,11 @@ const Registro = () => {
   const containerStyle = {
     minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
     background: 'linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%)',
-    position: 'relative', overflow: 'hidden'
+    position: 'relative', overflow: 'hidden', padding: '2rem'
   };
 
   const formStyle = { display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' };
-  const inputStyle = { padding: '1rem', borderRadius: '8px', border: 'none', background: 'rgba(255,255,255,0.9)', fontSize: '1rem', outline: 'none' };
+  const inputStyle = { padding: '1rem', borderRadius: '8px', border: 'none', background: 'rgba(255,255,255,0.9)', fontSize: '1rem', outline: 'none', width: '100%', boxSizing: 'border-box' };
 
   return (
     <div style={containerStyle}>

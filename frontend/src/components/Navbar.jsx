@@ -1,14 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
-import { Home, BookOpen, GraduationCap, LayoutDashboard, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { Home, BookOpen, GraduationCap, LayoutDashboard, LogOut, LogIn, UserPlus, Menu, X } from 'lucide-react';
 import logo from '../assets/logo.svg';
 
 const Navbar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
   const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
 
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const closeMenu = () => setIsMenuOpen(false);
+
   const handleLogout = async () => {
+    closeMenu();
     try {
       sessionStorage.removeItem('isLoggedIn');
       sessionStorage.removeItem('user');
@@ -82,46 +87,52 @@ const Navbar = () => {
 
   return (
     <nav style={navStyle}>
-      <Link to="/" style={logoContainerStyle}>
+      <Link to="/" style={logoContainerStyle} onClick={closeMenu}>
         <img src={logo} alt="Autopoiesis Logo" style={logoImgStyle} />
         <h1 style={logoTextStyle}>Autopoiesis</h1>
       </Link>
       
-      <div style={linksStyle}>
-        <Link to="/" style={linkItemStyle}><Home size={18} /> Inicio</Link>
-        <Link to="/cursos" style={linkItemStyle}><BookOpen size={18} /> Cursos</Link>
-        <Link to="/diplomados" style={linkItemStyle}><GraduationCap size={18} /> Diplomados</Link>
+      <button className="mobile-menu-btn" onClick={toggleMenu} aria-label="Menu">
+        {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+      </button>
+
+      <div className={`nav-links-container ${isMenuOpen ? 'open' : ''}`}>
+        <Link to="/" style={linkItemStyle} onClick={closeMenu}><Home size={18} /> Inicio</Link>
+        <Link to="/cursos" style={linkItemStyle} onClick={closeMenu}><BookOpen size={18} /> Cursos</Link>
+        <Link to="/diplomados" style={linkItemStyle} onClick={closeMenu}><GraduationCap size={18} /> Diplomados</Link>
         
-        {isLoggedIn ? (
-          <>
-            <Link to="/dashboard" style={linkItemStyle}><LayoutDashboard size={18} /> Panel</Link>
-            <button 
-              onClick={handleLogout} 
-              style={{...buttonStyle, backgroundColor: '#e74c3c', color: 'white'}}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              <LogOut size={18} /> Salir
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" style={linkItemStyle}>
-              <LogIn size={18} /> Ingresar
-            </Link>
-            <Link to="/registro" style={{textDecoration: 'none'}}>
+        <div className="nav-desktop-actions">
+          {isLoggedIn ? (
+            <>
+              <Link to="/dashboard" style={linkItemStyle} onClick={closeMenu}><LayoutDashboard size={18} /> Panel</Link>
               <button 
-                style={{...buttonStyle, backgroundColor: 'var(--color-primary)', color: 'white'}}
+                onClick={handleLogout} 
+                style={{...buttonStyle, backgroundColor: '#e74c3c', color: 'white'}}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
-                <UserPlus size={18} /> Regístrate
+                <LogOut size={18} /> Salir
               </button>
-            </Link>
-          </>
-        )}
-        <div style={{ marginLeft: '0.5rem', borderLeft: '1px solid var(--glass-border)', paddingLeft: '1rem' }}>
-          <ThemeToggle />
+            </>
+          ) : (
+            <>
+              <Link to="/login" style={linkItemStyle} onClick={closeMenu}>
+                <LogIn size={18} /> Ingresar
+              </Link>
+              <Link to="/registro" style={{textDecoration: 'none'}} onClick={closeMenu}>
+                <button 
+                  style={{...buttonStyle, backgroundColor: 'var(--color-primary)', color: 'white'}}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <UserPlus size={18} /> Regístrate
+                </button>
+              </Link>
+            </>
+          )}
+          <div style={{ paddingLeft: '0.5rem' }}>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </nav>

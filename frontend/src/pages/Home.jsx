@@ -21,10 +21,8 @@ const Home = () => {
   return (
     <div>
       {/* Hero Section */}
-      <section style={{ 
-        backgroundColor: 'var(--color-primary)', 
+      <section className="section-padding" style={{ 
         color: 'white', 
-        padding: '5rem 2rem', 
         textAlign: 'center',
         background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)'
       }}>
@@ -50,7 +48,7 @@ const Home = () => {
 
       {/* Stats Panel */}
       {stats.length > 0 && (
-        <section style={{ display: 'flex', justifyContent: 'center', gap: '3rem', padding: '3rem 2rem', backgroundColor: 'var(--bg-page)', flexWrap: 'wrap', transition: 'background-color 0.3s' }}>
+        <section className="container section-padding" style={{ display: 'flex', justifyContent: 'center', gap: '3rem', backgroundColor: 'var(--bg-page)', flexWrap: 'wrap', transition: 'background-color 0.3s' }}>
           {stats.map((stat, idx) => (
             <div key={idx} style={{ 
               textAlign: 'center', 
@@ -69,9 +67,9 @@ const Home = () => {
       )}
 
       {/* Featured Section */}
-      <section style={{ padding: '4rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
-        <h2 style={{ textAlign: 'center', fontSize: '2.5rem', marginBottom: '3rem', color: 'var(--color-primary)' }}>Áreas de Estudio</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+      <section className="container section-padding">
+        <h2 style={{ textAlign: 'center', fontSize: '2.5rem', marginBottom: '2rem', color: 'var(--color-primary)' }}>Áreas de Estudio</h2>
+        <div className="grid-responsive">
           
           <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
             <div style={{ backgroundColor: 'rgba(52, 152, 219, 0.1)', padding: '1rem', borderRadius: '50%', color: 'var(--color-accent)' }}>

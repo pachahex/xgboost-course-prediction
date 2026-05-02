@@ -24,8 +24,8 @@ const Footer = () => {
   };
 
   return (
-    <footer style={{ backgroundColor: 'var(--color-primary-dark)', color: 'white', padding: '3rem 2rem', marginTop: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '1200px', margin: '0 auto', flexWrap: 'wrap', gap: '2rem' }}>
+    <footer style={{ backgroundColor: 'var(--color-primary-dark)', color: 'white', marginTop: 'auto' }}>
+      <div className="container section-padding flex-stack" style={{ alignItems: 'flex-start' }}>
         <div>
           <h2>Academia Autopoiesis</h2>
           <p style={{ maxWidth: '300px', color: '#ccc' }}>Educación de excelencia para el desarrollo integral en innovación e investigación.</p>
