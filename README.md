@@ -66,12 +66,16 @@ Todo el módulo de control de acceso está sellado por **JSON Web Tokens (JWT)**
 
 ## 🎨 Frontend y Experiencia de Usuario (Fase 3 Completada)
 
-La interfaz de usuario ha sido desarrollada con **React 18** y **Vite**, priorizando una estética moderna, fluida y coherente con la identidad visual de la Academia Autopoiesis.
+La interfaz de usuario ha sido desarrollada con **React 19** y **Vite**, priorizando una estética moderna, fluida y coherente con la identidad visual de la Academia Autopoiesis.
 
 ### Estética y Diseño
 *   **Paleta de Colores:** Uso estricto de Púrpura (`#7f2b80`) y Cian (`#038fba`).
 *   **Glassmorphism:** Implementación de paneles translúcidos con desenfoque de fondo (*backdrop-filter*) en la sección de login y tarjetas de información, creando una sensación de profundidad y modernidad.
-*   **Diseño Responsivo:** Layout adaptativo para garantizar la legibilidad en diferentes dispositivos.
+*   **Diseño Mobile-First:** Sistema responsivo integral con clases utilitarias centralizadas, menús adaptativos (Hamburguesa en móvil) y optimización de visualización de imágenes (Pop-out Preview) para garantizar la mejor UX en cualquier dispositivo.
+
+### 📋 Consistencia y Desarrollo
+Para mantener la integridad visual y lógica del proyecto, se ha establecido un archivo de gobernanza:
+*   **`frontend/CONTEXT.md`**: Contiene los estándares oficiales de branding, tipografía, iconografía y las reglas inquebrantables de layout responsivo para futuros desarrollos.
 
 ### Funcionalidades Implementadas
 *   **Navegación Dinámica:** Uso de `react-router-dom` para una experiencia Single Page Application (SPA) sin recargas de página.
