@@ -48,6 +48,25 @@ def admin_required(f):
     wrap.__name__ = f.__name__
     return wrap
 
+def auth_required(f):
+    """Decorador para proteger rutas requiriendo un JWT válido sin importar el rol"""
+    def wrap(*args, **kwargs):
+        token = request.cookies.get('access_token')
+        if not token:
+            return jsonify({"error": "No token provisto. Acceso denegado."}), 401
+            
+        try:
+            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            request.user_info = decoded
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token expirado. Inicia sesión nuevamente."}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Token inválido."}), 401
+            
+        return f(*args, **kwargs)
+    wrap.__name__ = f.__name__
+    return wrap
+
 # ==========================================
 # RUTAS DE AUTENTICACIÓN Y REGISTRO
 # ==========================================
@@ -59,9 +78,13 @@ def registro():
     nombre = data.get('nombre_completo')
     correo = data.get('correo')
     password = data.get('password')
+    telefono = data.get('telefono')
+    fecha_nacimiento = data.get('fecha_nacimiento')
+    ocupacion = data.get('ocupacion')
+    departamento_id = data.get('departamento_id')
     
-    if not all([nombre, correo, password]):
-        return jsonify({"error": "Todos los campos son obligatorios."}), 400
+    if not all([nombre, correo, password, fecha_nacimiento, departamento_id]):
+        return jsonify({"error": "Faltan campos obligatorios."}), 400
         
     with get_db_connection() as conn:
         with conn.begin():
@@ -78,9 +101,18 @@ def registro():
             hash_pwd = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
             conn.execute(text("""
-                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena)
-                VALUES (:rid, :nombre, :correo, :pwd)
-            """), {"rid": rol_id, "nombre": nombre, "correo": correo, "pwd": hash_pwd})
+                INSERT INTO usuarios (rol_id, departamento_id, nombre_completo, correo, hash_contrasena, telefono, ocupacion, fecha_nacimiento)
+                VALUES (:rid, :dep_id, :nombre, :correo, :pwd, :tel, :ocu, :fnac)
+            """), {
+                "rid": rol_id, 
+                "dep_id": departamento_id, 
+                "nombre": nombre, 
+                "correo": correo, 
+                "pwd": hash_pwd,
+                "tel": telefono,
+                "ocu": ocupacion,
+                "fnac": fecha_nacimiento
+            })
             
     return jsonify({"message": "Registro exitoso. Ya puedes iniciar sesión."}), 201
 
@@ -236,17 +268,28 @@ def get_public_stats():
         ]
     })
 
+@app.route('/api/departamentos', methods=['GET'])
+def get_public_departamentos():
+    """Retorna la lista de departamentos para el formulario de registro"""
+    with get_db_connection() as conn:
+        result = conn.execute(text("SELECT id, nombre FROM departamentos ORDER BY id")).fetchall()
+        departamentos = [{"id": r.id, "nombre": r.nombre} for r in result]
+    return jsonify(departamentos)
+
 @app.route('/api/programas', methods=['GET'])
 def get_public_programas():
     """Retorna el catálogo unificado de Cursos y Diplomados ACTIVOS para la Portada"""
     with get_db_connection() as conn:
         result = conn.execute(text("""
             SELECT p.id, p.nombre, p.costo_oficial_bs, c.nombre as categoria, 
-                   ts.nombre as tipo, p.imagen_url, p.descripcion, p.activo
+                   ts.nombre as tipo, m.nombre as modalidad, 
+                   p.fecha_inicio, p.fecha_fin, p.duracion_horas,
+                   p.imagen_url, p.descripcion, p.activo
             FROM programas p
             JOIN categorias c ON p.categoria_id = c.id
             JOIN tipos_servicio ts ON p.tipo_servicio_id = ts.id
-            WHERE p.activo = true
+            JOIN modalidades m ON p.modalidad_id = m.id
+            WHERE p.activo = true AND p.eliminado = false
             ORDER BY p.id DESC
         """)).fetchall()
         
@@ -258,6 +301,10 @@ def get_public_programas():
                 "costo": float(r.costo_oficial_bs),
                 "categoria": r.categoria,
                 "tipo": r.tipo,
+                "modalidad": r.modalidad,
+                "fecha_inicio": str(r.fecha_inicio) if r.fecha_inicio else None,
+                "fecha_fin": str(r.fecha_fin) if r.fecha_fin else None,
+                "duracion_horas": r.duracion_horas,
                 "imagen_url": r.imagen_url,
                 "descripcion": r.descripcion,
                 "activo": r.activo
@@ -271,10 +318,15 @@ def get_all_programas():
     with get_db_connection() as conn:
         result = conn.execute(text("""
             SELECT p.id, p.nombre, p.costo_oficial_bs, c.nombre as categoria, 
-                   ts.nombre as tipo, p.imagen_url, p.descripcion, p.activo
+                   ts.nombre as tipo, m.nombre as modalidad, 
+                   p.fecha_inicio, p.fecha_fin, p.duracion_horas,
+                   p.imagen_url, p.descripcion, p.activo,
+                   (SELECT ARRAY_AGG(beneficio_id) FROM programa_beneficios WHERE programa_id = p.id) as beneficios_ids
             FROM programas p
             JOIN categorias c ON p.categoria_id = c.id
             JOIN tipos_servicio ts ON p.tipo_servicio_id = ts.id
+            JOIN modalidades m ON p.modalidad_id = m.id
+            WHERE p.eliminado = false
             ORDER BY p.id DESC
         """)).fetchall()
         
@@ -286,9 +338,14 @@ def get_all_programas():
                 "costo": float(r.costo_oficial_bs),
                 "categoria": r.categoria,
                 "tipo": r.tipo,
+                "modalidad": r.modalidad,
+                "fecha_inicio": str(r.fecha_inicio) if r.fecha_inicio else None,
+                "fecha_fin": str(r.fecha_fin) if r.fecha_fin else None,
+                "duracion_horas": r.duracion_horas,
                 "imagen_url": r.imagen_url,
                 "descripcion": r.descripcion,
-                "activo": r.activo
+                "activo": r.activo,
+                "beneficios_ids": r.beneficios_ids if r.beneficios_ids else []
             })
     return jsonify(programas)
 
@@ -309,11 +366,15 @@ def suscribir():
     with get_db_connection() as conn:
         with conn.begin():
             try:
+                # 1. Si existe como usuario, marcarlo como suscrito
+                user_id = conn.execute(text("UPDATE usuarios SET suscrito_boletin = true WHERE correo = :correo RETURNING id"), {"correo": correo}).scalar()
+                
+                # 2. Guardar en tabla de marketing con su ID si lo tenemos
                 conn.execute(text("""
-                    INSERT INTO suscriptores (correo)
-                    VALUES (:correo)
-                    ON CONFLICT (correo) DO NOTHING
-                """), {"correo": correo})
+                    INSERT INTO boletin_informativo (correo, usuario_id)
+                    VALUES (:correo, :uid)
+                    ON CONFLICT (correo) DO UPDATE SET usuario_id = EXCLUDED.usuario_id
+                """), {"correo": correo, "uid": user_id})
                 
                 return jsonify({"message": "Te has suscrito con éxito al boletín."}), 201
             except Exception as e:
@@ -336,11 +397,16 @@ def get_inscripciones():
         
         query = text("""
             SELECT i.id, p.nombre as programa, d.nombre as departamento, e.nombre as estado, 
-                   i.fecha_inscripcion, i.edad_estudiante, i.costo_real_bs 
+                   o.nombre as origen,
+                   i.fecha_inscripcion, 
+                   EXTRACT(YEAR FROM age(i.fecha_inscripcion, u.fecha_nacimiento))::INT as edad_estudiante,
+                   i.costo_pagado as costo 
             FROM inscripciones i
             JOIN programas p ON i.programa_id = p.id
-            JOIN departamentos d ON i.departamento_id = d.id
+            JOIN usuarios u ON i.usuario_id = u.id
+            JOIN departamentos d ON u.departamento_id = d.id
             JOIN estados_inscripcion e ON i.estado_id = e.id
+            JOIN origenes_captacion o ON i.origen_id = o.id
             ORDER BY i.fecha_inscripcion DESC
             LIMIT :l OFFSET :o
         """)
@@ -354,9 +420,10 @@ def get_inscripciones():
                 "programa": r.programa,
                 "departamento": r.departamento,
                 "estado": r.estado,
+                "origen": r.origen,
                 "fecha": str(r.fecha_inscripcion),
                 "edad": r.edad_estudiante,
-                "costo": float(r.costo_real_bs)
+                "costo": float(r.costo)
             })
             
     return jsonify({
@@ -374,8 +441,13 @@ def create_programa():
     costo = request.form.get('costo')
     categoria_id = request.form.get('categoria_id')
     tipo_servicio_id = request.form.get('tipo_servicio_id')
+    modalidad_id = request.form.get('modalidad_id', 1) # Default a 1 (Virtual) si no viene
+    fecha_inicio = request.form.get('fecha_inicio')
+    fecha_fin = request.form.get('fecha_fin')
+    duracion_horas = request.form.get('duracion_horas')
     descripcion = request.form.get('descripcion')
     activo = request.form.get('activo') == 'true'
+    beneficios_ids = request.form.getlist('beneficios[]') # Puede venir vacío
     
     if not all([nombre, costo, categoria_id, tipo_servicio_id]):
          return jsonify({"error": "Faltan campos obligatorios"}), 400
@@ -391,18 +463,33 @@ def create_programa():
         
     with get_db_connection() as conn:
         with conn.begin():
-            conn.execute(text("""
-                INSERT INTO programas (nombre, categoria_id, tipo_servicio_id, costo_oficial_bs, imagen_url, descripcion, activo)
-                VALUES (:n, :c_id, :t_id, :costo, :img, :desc, :act)
+            # Insertar el programa principal
+            programa_id = conn.execute(text("""
+                INSERT INTO programas (nombre, categoria_id, tipo_servicio_id, modalidad_id, costo_oficial_bs, 
+                                       fecha_inicio, fecha_fin, duracion_horas, imagen_url, descripcion, activo)
+                VALUES (:n, :c_id, :t_id, :m_id, :costo, :f_ini, :f_fin, :dur, :img, :desc, :act)
+                RETURNING id
             """), {
                 "n": nombre.upper(), 
                 "c_id": categoria_id, 
-                "t_id": tipo_servicio_id, 
+                "t_id": tipo_servicio_id,
+                "m_id": modalidad_id,
                 "costo": costo,
+                "f_ini": fecha_inicio if fecha_inicio else None,
+                "f_fin": fecha_fin if fecha_fin else None,
+                "dur": duracion_horas if duracion_horas else None,
                 "img": imagen_url,
                 "desc": descripcion,
                 "act": activo
-            })
+            }).scalar()
+            
+            # Insertar beneficios opcionales
+            if beneficios_ids:
+                for b_id in beneficios_ids:
+                    conn.execute(text("""
+                        INSERT INTO programa_beneficios (programa_id, beneficio_id)
+                        VALUES (:pid, :bid)
+                    """), {"pid": programa_id, "bid": b_id})
             
     return jsonify({"message": "Programa publicado con éxito"}), 201
 
@@ -414,8 +501,13 @@ def update_programa(programa_id):
     costo = request.form.get('costo')
     categoria_id = request.form.get('categoria_id')
     tipo_servicio_id = request.form.get('tipo_servicio_id')
+    modalidad_id = request.form.get('modalidad_id', 1)
+    fecha_inicio = request.form.get('fecha_inicio')
+    fecha_fin = request.form.get('fecha_fin')
+    duracion_horas = request.form.get('duracion_horas')
     descripcion = request.form.get('descripcion')
     activo = request.form.get('activo') == 'true'
+    beneficios_ids = request.form.getlist('beneficios[]')
     
     if not all([nombre, costo, categoria_id, tipo_servicio_id]):
          return jsonify({"error": "Faltan campos obligatorios"}), 400
@@ -431,37 +523,86 @@ def update_programa(programa_id):
 
     with get_db_connection() as conn:
         with conn.begin():
+            # Construir la query dinámica para no machacar la imagen si no se envió
+            update_query = """
+                UPDATE programas 
+                SET nombre = :n, categoria_id = :c_id, tipo_servicio_id = :t_id, modalidad_id = :m_id,
+                    costo_oficial_bs = :costo, fecha_inicio = :f_ini, fecha_fin = :f_fin, duracion_horas = :dur, 
+                    descripcion = :desc, activo = :act
+            """
+            params = {
+                "n": nombre.upper(), "c_id": categoria_id, "t_id": tipo_servicio_id, "m_id": modalidad_id,
+                "costo": costo, "desc": descripcion, "act": activo, "pid": programa_id,
+                "f_ini": fecha_inicio if fecha_inicio else None,
+                "f_fin": fecha_fin if fecha_fin else None,
+                "dur": duracion_horas if duracion_horas else None
+            }
+            
             if imagen_url:
-                conn.execute(text("""
-                    UPDATE programas 
-                    SET nombre = :n, categoria_id = :c_id, tipo_servicio_id = :t_id, 
-                        costo_oficial_bs = :costo, descripcion = :desc, imagen_url = :img, activo = :act
-                    WHERE id = :pid
-                """), {
-                    "n": nombre.upper(), "c_id": categoria_id, "t_id": tipo_servicio_id, 
-                    "costo": costo, "desc": descripcion, "img": imagen_url, "act": activo, "pid": programa_id
-                })
+                update_query += ", imagen_url = :img WHERE id = :pid"
+                params["img"] = imagen_url
             else:
-                conn.execute(text("""
-                    UPDATE programas 
-                    SET nombre = :n, categoria_id = :c_id, tipo_servicio_id = :t_id, 
-                        costo_oficial_bs = :costo, descripcion = :desc, activo = :act
-                    WHERE id = :pid
-                """), {
-                    "n": nombre.upper(), "c_id": categoria_id, "t_id": tipo_servicio_id, 
-                    "costo": costo, "desc": descripcion, "act": activo, "pid": programa_id
-                })
+                update_query += " WHERE id = :pid"
+
+            conn.execute(text(update_query), params)
+            
+            # Actualizar beneficios (borrar y recrear)
+            conn.execute(text("DELETE FROM programa_beneficios WHERE programa_id = :pid"), {"pid": programa_id})
+            if beneficios_ids:
+                for b_id in beneficios_ids:
+                    conn.execute(text("""
+                        INSERT INTO programa_beneficios (programa_id, beneficio_id)
+                        VALUES (:pid, :bid)
+                    """), {"pid": programa_id, "bid": b_id})
                 
     return jsonify({"message": "Programa actualizado exitosamente!"}), 200
+
+@app.route('/api/admin/programas/<int:programa_id>/toggle-status', methods=['PATCH'])
+@admin_required
+def toggle_programa_status(programa_id):
+    """Alterna el estado activo/inactivo de un programa (Visibilidad en Web)"""
+    with get_db_connection() as conn:
+        with conn.begin():
+            current_status = conn.execute(text("SELECT activo FROM programas WHERE id = :pid"), {"pid": programa_id}).scalar()
+            if current_status is None:
+                return jsonify({"error": "Programa no encontrado"}), 404
+            
+            new_status = not current_status
+            conn.execute(text("UPDATE programas SET activo = :s WHERE id = :pid"), {"s": new_status, "pid": programa_id})
+            
+    return jsonify({"message": "Estado de visibilidad actualizado", "nuevo_estado": new_status}), 200
+
+@app.route('/api/admin/programas/<int:programa_id>', methods=['DELETE'])
+@admin_required
+def delete_programa(programa_id):
+    """Borrado Lógico: el programa desaparece de TODO el sistema (Panel + Web) pero persiste en DB para ML"""
+    with get_db_connection() as conn:
+        with conn.begin():
+            # Verificar existencia
+            exists = conn.execute(text("SELECT id FROM programas WHERE id = :pid"), {"pid": programa_id}).scalar()
+            if not exists:
+                return jsonify({"error": "Programa no encontrado"}), 404
+            
+            # Marcamos como eliminado Y desactivamos visibilidad web por seguridad
+            conn.execute(text("UPDATE programas SET eliminado = true, activo = false WHERE id = :pid"), {"pid": programa_id})
+            
+    return jsonify({"message": "Programa eliminado del sistema"}), 200
 
 @app.route('/api/admin/utils/catalogos', methods=['GET'])
 @admin_required
 def get_catalogos():
-    """Devuelve las categorias y tipos para los SELECT del formulario"""
+    """Devuelve las categorias, tipos, modalidades y beneficios para los SELECT del formulario"""
     with get_db_connection() as conn:
         categorias = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM categorias")).fetchall()]
         tipos = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM tipos_servicio")).fetchall()]
-    return jsonify({"categorias": categorias, "tipos_servicio": tipos})
+        modalidades = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM modalidades")).fetchall()]
+        beneficios = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM beneficios")).fetchall()]
+    return jsonify({
+        "categorias": categorias, 
+        "tipos_servicio": tipos,
+        "modalidades": modalidades,
+        "beneficios": beneficios
+    })
 
 
 @app.route('/api/admin/predicciones', methods=['GET'])
@@ -502,21 +643,26 @@ def get_predicciones():
     # Invertir para que vengan cronológicamente en los gráficos de Recharts
     return jsonify(predicciones[::-1])
 
-@app.route('/api/admin/seguridad/2fa/setup', methods=['GET'])
-@admin_required
+@app.route('/api/seguridad/2fa/setup', methods=['GET'])
+@auth_required
 def setup_2fa():
     """Genera un nuevo TOTP secret y un código QR en Base64 para Google Authenticator"""
     user_id = request.user_info['sub']
     
-    # Generar un nuevo secreto
-    secret = pyotp.random_base32()
-    
     with get_db_connection() as conn:
         with conn.begin():
+            user_data = conn.execute(text("SELECT correo, totp_enabled FROM usuarios WHERE id = :uid"), {"uid": user_id}).fetchone()
+            
+            if user_data and user_data.totp_enabled:
+                return jsonify({"already_configured": True})
+                
+            correo = user_data.correo if user_data else "user@example.com"
+            
+            # Generar un nuevo secreto
+            secret = pyotp.random_base32()
+            
             # Guardarlo en el usuario (aún no activado)
             conn.execute(text("UPDATE usuarios SET totp_secret = :s WHERE id = :uid"), {"s": secret, "uid": user_id})
-            # Obtener el correo
-            correo = conn.execute(text("SELECT correo FROM usuarios WHERE id = :uid"), {"uid": user_id}).scalar()
             
     # Generar URL de aprovisionamiento
     totp_auth_url = pyotp.totp.TOTP(secret).provisioning_uri(name=correo, issuer_name="Autopoiesis")
@@ -536,26 +682,26 @@ def setup_2fa():
         "qr_code": f"data:image/png;base64,{qr_base64}"
     })
 
-@app.route('/api/admin/seguridad/2fa/verify', methods=['POST'])
-@admin_required
+@app.route('/api/seguridad/2fa/verify', methods=['POST'])
+@auth_required
 def verify_2fa_setup():
     """Verifica el primer código para activar definitivamente el 2FA en la cuenta"""
     user_id = request.user_info['sub']
     code = request.json.get('code')
     
     with get_db_connection() as conn:
-        secret = conn.execute(text("SELECT totp_secret FROM usuarios WHERE id = :uid"), {"uid": user_id}).scalar()
-        
-        if not secret:
-            return jsonify({"error": "No hay un código TOTP configurado para probar."}), 400
+        with conn.begin():
+            secret = conn.execute(text("SELECT totp_secret FROM usuarios WHERE id = :uid"), {"uid": user_id}).scalar()
             
-        totp = pyotp.TOTP(secret)
-        if totp.verify(code, valid_window=2):
-            conn.execute(text("UPDATE usuarios SET totp_enabled = true WHERE id = :uid"), {"uid": user_id})
-            conn.commit()
-            return jsonify({"message": "Autenticación de 2 Factores activada con éxito."})
-        else:
-            return jsonify({"error": "Código incorrecto."}), 400
+            if not secret:
+                return jsonify({"error": "No hay un código TOTP configurado para probar."}), 400
+                
+            totp = pyotp.TOTP(secret)
+            if totp.verify(code, valid_window=2):
+                conn.execute(text("UPDATE usuarios SET totp_enabled = true WHERE id = :uid"), {"uid": user_id})
+                return jsonify({"message": "Autenticación de 2 Factores activada con éxito."})
+            else:
+                return jsonify({"error": "Código incorrecto."}), 400
 
 @app.route('/api/admin/mailing/send', methods=['POST'])
 @admin_required
@@ -569,7 +715,7 @@ def send_mailing():
         return jsonify({"error": "Asunto y mensaje son requeridos."}), 400
         
     with get_db_connection() as conn:
-        suscriptores = conn.execute(text("SELECT correo FROM suscriptores WHERE activo = true")).fetchall()
+        suscriptores = conn.execute(text("SELECT correo FROM boletin_informativo WHERE activo = true")).fetchall()
         
     total_enviados = len(suscriptores)
     

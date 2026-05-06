@@ -35,6 +35,21 @@ CREATE TABLE roles (
     nombre VARCHAR(50) NOT NULL UNIQUE
 );
 
+CREATE TABLE origenes_captacion (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE modalidades (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE beneficios (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE
+);
+
 -- ==============================================================================
 
 -- 2. Fundamento: Abstracción e Integridad Referencial[cite: 4]
@@ -44,39 +59,71 @@ CREATE TABLE roles (
 CREATE TABLE usuarios (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     rol_id INT NOT NULL,
+    departamento_id INT,
     nombre_completo VARCHAR(150) NOT NULL,
     correo VARCHAR(150) UNIQUE NOT NULL,
     hash_contrasena VARCHAR(255) NOT NULL,
+    telefono VARCHAR(20),
+    ocupacion VARCHAR(100),
+    fecha_nacimiento DATE,
     totp_secret VARCHAR(50),
     totp_enabled BOOLEAN DEFAULT false,
+    suscrito_boletin BOOLEAN DEFAULT false,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_usuario_rol FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT
+    CONSTRAINT fk_usuario_rol FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_usuario_departamento FOREIGN KEY (departamento_id) REFERENCES departamentos(id) ON DELETE RESTRICT
     -- Fundamento: Integridad Referencial mediante FK (Llave Foránea)[cite: 4]. 
     -- 'ON DELETE RESTRICT' aplica el principio de prevención de datos huérfanos[cite: 4]. 
     -- No se puede borrar un rol si existen usuarios asignados a él[cite: 4].
 );
 
-CREATE TABLE suscriptores (
+CREATE TABLE boletin_informativo (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    usuario_id INT,
     correo VARCHAR(150) NOT NULL UNIQUE,
     fecha_suscripcion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    activo BOOLEAN DEFAULT true
+    activo BOOLEAN DEFAULT true,
+    CONSTRAINT fk_boletin_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
 CREATE TABLE programas (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     categoria_id INT NOT NULL,
     tipo_servicio_id INT NOT NULL,
+    modalidad_id INT NOT NULL,
     nombre VARCHAR(200) NOT NULL,
     costo_oficial_bs DECIMAL(10, 2) NOT NULL,
+    fecha_inicio DATE,
+    fecha_fin DATE,
+    duracion_horas INT,
     imagen_url VARCHAR(255),
     descripcion TEXT,
-    activo BOOLEAN DEFAULT true,
+    activo BOOLEAN DEFAULT false,
+    eliminado BOOLEAN DEFAULT false,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_programa_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_programa_servicio FOREIGN KEY (tipo_servicio_id) REFERENCES tipos_servicio(id) ON DELETE RESTRICT
+    CONSTRAINT fk_programa_servicio FOREIGN KEY (tipo_servicio_id) REFERENCES tipos_servicio(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_programa_modalidad FOREIGN KEY (modalidad_id) REFERENCES modalidades(id) ON DELETE RESTRICT
     -- Fundamento: Composición en el modelo Entidad-Relación[cite: 4].
     -- Un programa "tiene una" categoría y "tiene un" tipo de servicio[cite: 4].
+);
+
+CREATE TABLE programa_facilitadores (
+    programa_id INT NOT NULL,
+    facilitador_id INT NOT NULL,
+    PRIMARY KEY (programa_id, facilitador_id),
+    CONSTRAINT fk_pf_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pf_facilitador FOREIGN KEY (facilitador_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    -- Fundamento: Resolución de Relación N:M[cite: 4]. 
+    -- Un programa puede tener múltiples facilitadores, y un facilitador dictar múltiples programas.
+);
+
+CREATE TABLE programa_beneficios (
+    programa_id INT NOT NULL,
+    beneficio_id INT NOT NULL,
+    PRIMARY KEY (programa_id, beneficio_id),
+    CONSTRAINT fk_pb_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pb_beneficio FOREIGN KEY (beneficio_id) REFERENCES beneficios(id) ON DELETE CASCADE
 );
 
 -- ==============================================================================
@@ -89,19 +136,35 @@ CREATE TABLE inscripciones (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     usuario_id INT NOT NULL,
     programa_id INT NOT NULL,
-    departamento_id INT NOT NULL,
     estado_id INT NOT NULL,
+    origen_id INT NOT NULL,
     fecha_inscripcion DATE NOT NULL,
-    edad_estudiante INT CHECK (edad_estudiante >= 15 AND edad_estudiante <= 100),
-    costo_real_bs DECIMAL(10, 2) NOT NULL,
+    costo_pagado DECIMAL(10, 2) NOT NULL,
     CONSTRAINT fk_inscripcion_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     CONSTRAINT fk_inscripcion_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
-    CONSTRAINT fk_inscripcion_departamento FOREIGN KEY (departamento_id) REFERENCES departamentos(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_inscripcion_estado FOREIGN KEY (estado_id) REFERENCES estados_inscripcion(id) ON DELETE RESTRICT
-    -- Fundamento: Validaciones a nivel de base de datos[cite: 4].
-    -- El CHECK en 'edad_estudiante' asegura que la lógica de negocio se cumpla antes 
-    -- de la inserción, reduciendo la carga de validación en el servidor backend[cite: 4].
+    CONSTRAINT fk_inscripcion_estado FOREIGN KEY (estado_id) REFERENCES estados_inscripcion(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_inscripcion_origen FOREIGN KEY (origen_id) REFERENCES origenes_captacion(id) ON DELETE RESTRICT
 );
+
+CREATE TABLE pagos (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    inscripcion_id INT NOT NULL,
+    monto DECIMAL(10, 2) NOT NULL,
+    fecha_pago TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_pago_inscripcion FOREIGN KEY (inscripcion_id) REFERENCES inscripciones(id) ON DELETE CASCADE
+    -- Fundamento: Historial Financiero Independiente.
+    -- Separa el estado de la inscripción del flujo de caja, ayudando a XGBoost a predecir abandono por impagos.
+);
+
+CREATE TABLE certificados (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    inscripcion_id INT NOT NULL UNIQUE,
+    codigo_verificacion VARCHAR(100) UNIQUE NOT NULL,
+    url_pdf VARCHAR(255),
+    fecha_emision TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_certificado_inscripcion FOREIGN KEY (inscripcion_id) REFERENCES inscripciones(id) ON DELETE CASCADE
+);
+
 
 -- ==============================================================================
 
@@ -160,3 +223,41 @@ CREATE INDEX idx_inscripciones_programa_id ON inscripciones(programa_id);
 CREATE INDEX idx_inscripciones_fecha ON inscripciones(fecha_inscripcion);
 CREATE INDEX idx_caracteristicas_demanda_programa_tiempo ON caracteristicas_demanda_semanal(programa_id, anio, semana_del_anio);
 CREATE INDEX idx_predicciones_programa_tiempo ON predicciones(programa_id, anio_objetivo, semana_objetivo);
+
+-- ==============================================================================
+-- DATOS CATÁLOGO BASE (Bootstrap)
+-- ==============================================================================
+
+INSERT INTO roles (nombre) VALUES 
+('Administrador'), ('Estudiante'), ('Facilitador'), ('Suscriptor') 
+ON CONFLICT DO NOTHING;
+
+INSERT INTO departamentos (nombre) VALUES 
+('La Paz'), ('Santa Cruz'), ('Cochabamba'), ('Oruro'), 
+('Potosi'), ('Tarija'), ('Chuquisaca'), ('Beni'), ('Pando'), ('Extranjero') 
+ON CONFLICT DO NOTHING;
+
+INSERT INTO categorias (nombre) VALUES 
+('Derecho'), ('Psicología'), ('Investigación'), ('Educación'), 
+('Salud'), ('Tecnología'), ('Administración') 
+ON CONFLICT DO NOTHING;
+
+INSERT INTO tipos_servicio (nombre) VALUES 
+('Curso'), ('Diplomado'), ('Masterclass Gratuita') 
+ON CONFLICT DO NOTHING;
+
+INSERT INTO estados_inscripcion (nombre) VALUES 
+('Completado'), ('Pendiente'), ('Abandono') 
+ON CONFLICT DO NOTHING;
+
+INSERT INTO origenes_captacion (nombre) VALUES 
+('Boletin Informativo'), ('Facebook') 
+ON CONFLICT DO NOTHING;
+
+INSERT INTO modalidades (nombre) VALUES 
+('Virtual'), ('Presencial'), ('Híbrido') 
+ON CONFLICT DO NOTHING;
+
+INSERT INTO beneficios (nombre) VALUES 
+('Material Digital'), ('Sesiones Grabadas'), ('Certificado de Aprobación'), ('Tutoría Personalizada') 
+ON CONFLICT DO NOTHING;

@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { fetchApi } from '../api';
 
 const Registro = () => {
-  const [formData, setFormData] = useState({ nombre_completo: '', correo: '', password: '' });
+  const [formData, setFormData] = useState({ 
+    nombre_completo: '', correo: '', password: '', 
+    telefono: '', fecha_nacimiento: '', ocupacion: '', departamento_id: '' 
+  });
+  const [departamentos, setDepartamentos] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchApi('/departamentos')
+      .then(res => setDepartamentos(res))
+      .catch(err => console.error("Error al cargar departamentos:", err));
+  }, []);
 
   const handleRegistro = async (e) => {
     e.preventDefault();
@@ -62,6 +72,34 @@ const Registro = () => {
           <div>
             <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Contraseña</label>
             <input type="password" name="password" value={formData.password} onChange={handleChange} required style={inputStyle} placeholder="••••••••" />
+          </div>
+          <div>
+            <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Teléfono</label>
+            <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} style={inputStyle} placeholder="Ej. 70012345" />
+          </div>
+          <div>
+            <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Fecha de Nacimiento</label>
+            <input type="date" name="fecha_nacimiento" value={formData.fecha_nacimiento} onChange={handleChange} required style={inputStyle} />
+          </div>
+          <div>
+            <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Ocupación</label>
+            <select name="ocupacion" value={formData.ocupacion} onChange={handleChange} style={inputStyle}>
+              <option value="">Seleccione su ocupación...</option>
+              <option value="Estudiante Universitario">Estudiante Universitario</option>
+              <option value="Egresado">Egresado</option>
+              <option value="Profesional Junior">Profesional Junior</option>
+              <option value="Profesional Senior">Profesional Senior</option>
+              <option value="Independiente">Independiente</option>
+            </select>
+          </div>
+          <div>
+            <label style={{display:'block', marginBottom:'0.5rem', color: '#ddd'}}>Departamento</label>
+            <select name="departamento_id" value={formData.departamento_id} onChange={handleChange} required style={inputStyle}>
+              <option value="">Seleccione un departamento...</option>
+              {departamentos.map(dep => (
+                <option key={dep.id} value={dep.id}>{dep.nombre}</option>
+              ))}
+            </select>
           </div>
           
           <button type="submit" disabled={loading} style={{ backgroundColor: 'var(--color-accent)', color: 'white', fontWeight: 'bold', padding: '1rem', fontSize: '1.1rem', marginTop: '1rem', opacity: loading ? 0.7 : 1, border: 'none', borderRadius: '8px', cursor: 'pointer' }}>

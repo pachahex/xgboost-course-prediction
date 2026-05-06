@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchApi } from '../api';
+import { ShieldCheck } from 'lucide-react';
 
 const Login = () => {
   const [correo, setCorreo] = useState('');
@@ -29,7 +30,8 @@ const Login = () => {
       } else {
         sessionStorage.setItem('isLoggedIn', 'true');
         sessionStorage.setItem('user', JSON.stringify(res.user));
-        navigate('/dashboard');
+        // En lugar de ir directo al dashboard, preguntamos si quiere activar 2FA
+        setStep(3);
       }
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
@@ -136,7 +138,7 @@ const Login = () => {
               {loading ? 'Autenticando...' : 'Iniciar Sesión'}
             </button>
           </form>
-        ) : (
+        ) : step === 2 ? (
           <form onSubmit={handle2FA} style={formStyle}>
             <p style={{ color: '#ccc', textAlign: 'center' }}>Ingresa el código de 6 dígitos de tu aplicación Google Authenticator.</p>
             <div>
@@ -170,6 +172,48 @@ const Login = () => {
               {loading ? 'Verificando...' : 'Verificar'}
             </button>
           </form>
+        ) : (
+          <div style={formStyle}>
+            <ShieldCheck size={48} color="var(--color-accent)" style={{ display: 'block', margin: '0 auto 1rem' }} />
+            <h3 style={{ color: 'white', textAlign: 'center', marginBottom: '1rem' }}>¿Quieres mayor seguridad?</h3>
+            <p style={{ color: '#ccc', textAlign: 'center', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+              Te recomendamos activar la Autenticación de Dos Factores (2FA) para proteger tu cuenta de accesos no autorizados.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <button
+                onClick={() => navigate('/dashboard/seguridad')}
+                style={{
+                  backgroundColor: 'var(--color-accent)',
+                  padding: '1rem',
+                  fontSize: '1.1rem',
+                  border: 'none',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Configurar 2FA ahora
+              </button>
+              <button
+                onClick={() => navigate('/dashboard')}
+                style={{
+                  backgroundColor: 'transparent',
+                  padding: '1rem',
+                  fontSize: '1rem',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#ddd',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+              >
+                Omitir por ahora
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

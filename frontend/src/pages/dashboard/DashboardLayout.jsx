@@ -32,7 +32,7 @@ const DashboardLayout = () => {
         <p style={{ fontSize: '0.9rem', color: 'var(--color-accent)', marginBottom: '3rem' }}>
           {user.nombre} ({user.rol})
         </p>
- 
+
         <nav>
           {isAdmin ? (
             <>
@@ -48,29 +48,32 @@ const DashboardLayout = () => {
               <Link to="/dashboard/mailing" style={getLinkStyle('/dashboard/mailing')}>
                 <Mail size={18} /> Email Marketing
               </Link>
-              <Link to="/dashboard/seguridad" style={getLinkStyle('/dashboard/seguridad')}>
-                <ShieldCheck size={18} /> Seguridad (2FA)
-              </Link>
             </>
           ) : (
             <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
               <GraduationCap size={18} /> Mis Cursos
             </Link>
           )}
+
+          <div style={{ margin: '2rem 0', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+          
+          <Link to="/dashboard/seguridad" style={getLinkStyle('/dashboard/seguridad')}>
+            <ShieldCheck size={18} /> Seguridad (2FA)
+          </Link>
         </nav>
       </aside>
- 
+
       {/* Main Content */}
-      <section style={{ flex: 1, padding: '2rem', overflowX: 'auto' }}>
-        <div style={{ 
-          backgroundColor: 'var(--panel-bg)', 
-          borderRadius: '12px', 
-          padding: '2rem', 
-          minHeight: '60vh', 
+      <section style={{ flex: 1, padding: '2rem' }}>
+        <div style={{
+          backgroundColor: 'var(--panel-bg)',
+          borderRadius: '12px',
+          padding: '2rem',
+          minHeight: '60vh',
           boxShadow: '0 4px 6px var(--glass-shadow)',
           transition: 'background-color 0.3s, box-shadow 0.3s'
         }}>
-          {isAdmin ? (
+          {isAdmin || location.pathname !== '/dashboard' ? (
             <Outlet />
           ) : (
             <div style={{ textAlign: 'center', marginTop: '4rem' }}>

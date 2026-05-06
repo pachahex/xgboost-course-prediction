@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../../api';
+import { ShieldCheck } from 'lucide-react';
 
 const Seguridad = () => {
   const [setupData, setSetupData] = useState(null);
@@ -11,8 +12,12 @@ const Seguridad = () => {
   useEffect(() => {
     const initSetup = async () => {
       try {
-        const res = await fetchApi('/admin/seguridad/2fa/setup');
-        setSetupData(res);
+        const res = await fetchApi('/seguridad/2fa/setup');
+        if (res.already_configured) {
+          setAlreadyConfigured(true);
+        } else {
+          setSetupData(res);
+        }
       } catch (err) {
         setFeedback({ type: 'error', text: 'No se pudo iniciar la configuración 2FA.' });
       } finally {
@@ -29,7 +34,7 @@ const Seguridad = () => {
     setLoading(true);
     setFeedback(null);
     try {
-      const res = await fetchApi('/admin/seguridad/2fa/verify', {
+      const res = await fetchApi('/seguridad/2fa/verify', {
         method: 'POST',
         body: JSON.stringify({ code: totpCode })
       });
@@ -48,7 +53,7 @@ const Seguridad = () => {
   return (
     <div>
       <h2 style={{ color: 'var(--color-primary-dark)', marginBottom: '1rem' }}>Seguridad de la Cuenta</h2>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Protege tu cuenta de administrador activando la Autenticación de Dos Factores (2FA).</p>
+      <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Protege tu cuenta activando la Autenticación de Dos Factores (2FA).</p>
 
       {feedback && (
         <div style={{ padding: '1rem', marginBottom: '2rem', borderRadius: '8px', backgroundColor: feedback.type === 'success' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)', color: feedback.type === 'success' ? '#2e7d32' : '#d32f2f', border: `1px solid ${feedback.type === 'success' ? '#4caf50' : '#f44336'}` }}>
@@ -99,7 +104,7 @@ const Seguridad = () => {
         </div>
       ) : (
         <div style={{ textAlign: 'center', backgroundColor: 'var(--bg-page)', padding: '3rem', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🛡️</div>
+          <ShieldCheck size={64} color="var(--color-primary)" style={{ marginBottom: '1rem' }} />
           <h3 style={{ color: 'var(--color-primary)', marginBottom: '1rem' }}>2FA está Activo</h3>
           <p style={{ color: 'var(--text-main)' }}>Tu cuenta está protegida con seguridad de grado bancario.</p>
         </div>

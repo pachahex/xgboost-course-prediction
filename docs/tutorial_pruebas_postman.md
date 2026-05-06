@@ -17,7 +17,7 @@ Simularemos cuando un usuario deja su correo en el pie de página (Footer).
       "correo": "visitante@ejemplo.com"
     }
     ```
-*   **Comportamiento Esperado:** Recibirás un `201 Created` con el mensaje *"Te has suscrito con éxito al boletín."*. Si revisas la base de datos, verás el correo en la tabla `suscriptores` y no en `usuarios`.
+*   **Comportamiento Esperado:** Recibirás un `201 Created` con el mensaje *"Te has suscrito con éxito al boletín."*. Si revisas la base de datos, verás el correo en la tabla `boletin_informativo` y no en `usuarios`.
 
 ---
 

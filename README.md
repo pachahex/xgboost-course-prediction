@@ -28,10 +28,10 @@ El diseño sigue directrices rigurosas de Normalización (1NF a 3NF) para evitar
     *   **Suscriptor**: Usuario prospecto, cuyo registro se adquiere de la Landing Page por medio de formularios de interés (Newsletters o Consultas) que se expandirá para recolectar el nombre.
 *   **`programas`**: Abstrae la oferta académica concreta, englobando a su categoría y costo oficial.
 *   **`usuarios`**: Entidad única regida por llaves foráneas para estandarizar accesos y metadatos individuales (Contraseñas con Hashing por Bcrypt).
-*   **`inscripciones`**: Entidad transaccional transitoria (Muchos a Muchos), vincula un usuario específico a un curso particular aportando atributos dinámicos como 'fecha_inscripcion' y 'edad_estudiante'. 
+*   **`inscripciones`**: Entidad transaccional transitoria (Muchos a Muchos), vincula un usuario específico a un curso particular registrando la `fecha_inscripcion` y el `costo_real_bs`.
 
-**Nota sobre los Datos Históricos:**
-Para conservar la consistencia de Base de Datos y cumplir la restricción relacional `usuario_id`, las más de 3000 inscripciones transaccionales recopiladas en los últimos años han sido pivotadas genéricamente al perfil de **Usuario Administrador Seed**. La plataforma futura exigirá formalmente nombres y apellidos completos.
+**Arquitectura de Datos Demográficos:**
+La base de datos sigue el principio de **Normalización Estricta**. Toda la información demográfica (Fecha de Nacimiento, Departamento, Teléfono, Ocupación) pertenece exclusivamente a la tabla `usuarios`. Las transacciones en `inscripciones` simplemente heredan esta información relacionalmente, garantizando que no haya redundancia de datos y preparando el terreno para un análisis de Machine Learning profesional.
 
 ---
 
@@ -96,12 +96,13 @@ Para acceder al sistema privado y visualizar el dashboard, utiliza los siguiente
 
 Una vez que los contenedores estén corriendo por primera vez, la base de datos estará estructurada pero vacía. Debes ejecutar los siguientes comandos para poblar el sistema y activar las predicciones:
 
-### 1. Importar Datos Históricos (ETL)
-Puebla el sistema con roles, usuarios y más de 3,000 inscripciones reales para pruebas:
+### 1. Generar e Importar Datos (ETL)
+Genera el dataset sintético adaptado a la nueva estructura de base de datos y puebla el sistema con roles, usuarios enriquecidos y miles de inscripciones:
 ```bash
+docker exec -it xgboost-course-prediction-backend-1 python data/generate_dataset.py
 docker exec -it xgboost-course-prediction-backend-1 python import_data.py
 ```
-*   **Credenciales resultantes:** `admin@autopoiesis.com` / `admin123`
+*   **Credenciales Administrador:** `admin@autopoiesis.com` / `admin123`
 
 ### 2. Entrenar el Modelo de IA (XGBoost + SHAP)
 Este script procesa los datos históricos, entrena el modelo predictivo y genera los valores de explicabilidad para el Dashboard:

@@ -6,11 +6,11 @@ export const fetchApi = async (endpoint, options = {}) => {
   const mergedOptions = {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...options.headers,
     },
     // Necesario para enviar y recibir Cookies HTTP-Only con Flask
-    credentials: 'include' 
+    credentials: 'include'
   };
 
   const response = await fetch(`${API_URL}${endpoint}`, mergedOptions);
