@@ -28,7 +28,8 @@
 }
 
 :root.dark {
-  --bg-page: #0f0d1a; /* Un morado muy oscuro casi negro */
+  --bg-page: #0f0d1a;
+  /* Un morado muy oscuro casi negro */
   --text-main: #f0f0f0;
   --text-muted: #aaa;
   --panel-bg: rgba(30, 26, 59, 0.6);
@@ -42,7 +43,9 @@ body {
   min-height: 100vh;
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   color: var(--color-primary);
   font-weight: 700;
 }
@@ -70,6 +73,7 @@ button {
   cursor: pointer;
   transition: background-color 0.25s, transform 0.1s;
 }
+
 button:hover {
   background-color: var(--color-primary-dark);
   transform: translateY(-2px);
@@ -110,10 +114,12 @@ button:hover {
   background-size: contain;
   background-color: rgba(0, 0, 0, 0.95);
   position: absolute;
-  height: 350px; /* Altura mucho mayor para apreciar detalles */
+  height: 350px;
+  /* Altura mucho mayor para apreciar detalles */
   width: 110%;
   left: -5%;
-  top: -100px; /* Flota hacia arriba para no tapar todo el texto */
+  top: -100px;
+  /* Flota hacia arriba para no tapar todo el texto */
   z-index: 100;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   transform: scale(1.05);
@@ -152,7 +158,8 @@ button:hover {
 /* 3. Rejillas (Grids) para Tarjetas */
 .grid-responsive {
   display: grid;
-  grid-template-columns: 1fr; /* Móvil: 1 columna */
+  grid-template-columns: 1fr;
+  /* Móvil: 1 columna */
   gap: 1.5rem;
   width: 100%;
 }
@@ -163,6 +170,15 @@ button:hover {
   flex-direction: column;
   gap: 1.5rem;
 }
+
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
 
 /* Componentes Específicos - Navbar Móvil */
 .mobile-menu-btn {
@@ -175,7 +191,8 @@ button:hover {
 }
 
 .nav-links-container {
-  display: none; /* Oculto en móvil por defecto (se maneja por estado) */
+  display: none;
+  /* Oculto en móvil por defecto (se maneja por estado) */
   flex-direction: column;
   width: 100%;
   gap: 1rem;
@@ -213,7 +230,8 @@ button:hover {
   }
 
   .grid-responsive {
-    grid-template-columns: repeat(2, 1fr); /* Tablet: 2 columnas */
+    grid-template-columns: repeat(2, 1fr);
+    /* Tablet: 2 columnas */
     gap: 2rem;
   }
 
@@ -223,13 +241,23 @@ button:hover {
     justify-content: space-between;
   }
 
+  .mobile-only {
+    display: none;
+  }
+
+  .desktop-only {
+    display: block;
+  }
+
+
   /* Restaurar Navbar a formato horizontal */
   .mobile-menu-btn {
     display: none;
   }
 
   .nav-links-container {
-    display: flex !important; /* Fuerza visualización en desktop */
+    display: flex !important;
+    /* Fuerza visualización en desktop */
     flex-direction: row;
     position: static;
     width: auto;
@@ -254,6 +282,98 @@ button:hover {
   }
 
   .grid-responsive {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Desktop: Auto-fit */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* Desktop: Auto-fit */
+  }
+}
+
+/* ==========================================================================
+   DASHBOARD RESPONSIVE SYSTEM
+   ========================================================================== */
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-page);
+}
+
+.dashboard-sidebar {
+  width: 100%;
+  background-color: var(--color-primary-dark);
+  color: white;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  display: none;
+  /* Oculto en móvil por defecto */
+  z-index: 1000;
+}
+
+.dashboard-sidebar.open {
+  display: block;
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+
+.dashboard-header-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background-color: var(--color-primary-dark);
+  color: white;
+  z-index: 1001;
+}
+
+.dashboard-main {
+  flex: 1;
+  padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-content-card {
+  background-color: var(--panel-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-height: 60vh;
+  box-shadow: 0 4px 6px var(--glass-shadow);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+}
+
+/* Breakpoint para Tablet/Desktop */
+@media (min-width: 768px) {
+  .dashboard-container {
+    flex-direction: row;
+  }
+
+  .dashboard-sidebar {
+    display: block;
+    width: 260px;
+    min-width: 260px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+
+  .dashboard-header-mobile {
+    display: none;
+  }
+
+  .dashboard-main {
+    padding: 2rem;
+  }
+
+  .dashboard-content-card {
+    padding: 2.5rem;
   }
 }

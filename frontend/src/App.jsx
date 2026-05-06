@@ -13,6 +13,7 @@ import IAPredictiva from './pages/dashboard/IAPredictiva';
 import GestorProgramas from './pages/dashboard/GestorProgramas';
 import Mailing from './pages/dashboard/Mailing';
 import Seguridad from './pages/dashboard/Seguridad';
+import Preferencias from './pages/dashboard/Preferencias';
 import VerificarEmail from './pages/VerificarEmail';
 import ResetPassword from './pages/ResetPassword';
 import './index.css';
@@ -57,6 +58,7 @@ function App() {
               <Route path="ia-predictiva" element={<IAPredictiva />} />
               <Route path="mailing" element={<Mailing />} />
               <Route path="seguridad" element={<Seguridad />} />
+              <Route path="preferencias" element={<Preferencias />} />
             </Route>
             
             {/* Fallback */}

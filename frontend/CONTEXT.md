@@ -33,3 +33,18 @@
     - **Contraseñas**: Mínimo 8 caracteres, mayúscula, minúscula, número y símbolo. Formularios compatibles con gestores de contraseñas (`autoComplete="new-password"`).
     - **Verificación de Correo**: Todo registro desencadena el envío de un email. Los usuarios sin verificar verán un "Banner Constante" en el DashboardLayout.
     - **Recuperación**: Proceso "Forgot Password" integrado fluidamente en la vista de Login (Step 4).
+
+## 📱 Responsividad y Dashboard
+- **Enfoque Mobile-First**: Dado que la mayoría de los estudiantes acceden desde móviles, todos los componentes del Dashboard deben ser responsivos.
+- **Sistema de Layout**:
+    - Usar las clases `.dashboard-container`, `.dashboard-sidebar` y `.dashboard-main` de `index.css`.
+    - En móviles, la barra lateral se oculta y se activa mediante un botón de menú (hamburguesa) gestionado por el estado `isSidebarOpen`.
+    - **Aislamiento de Navegación**: El Navbar público debe ocultarse automáticamente en rutas `/dashboard` para evitar conflictos visuales y duplicidad de cabeceras en móviles. El DashboardLayout debe proveer su propia navegación e integración de salida (Logout / Volver a la Web).
+- **Utilidades**: Utilizar la clase `.flex-stack` para elementos que deban estar en fila en escritorio pero apilarse verticalmente en móviles (Break point: 768px).
+
+## 📧 Email Marketing y Suscripciones
+- **Rol Estudiante**: Los estudiantes gestionan sus preferencias de suscripción al boletín a través de la pestaña de `Perfil y Preferencias` (`/dashboard/preferencias`). Esta vista actualiza dinámicamente la base de datos para incluirlos o sacarlos de las campañas.
+- **Rol Administrador**: El administrador cuenta con la vista `Mailing.jsx`, que permite:
+    - Enviar correos masivos y personalizados en HTML.
+    - Adjuntar imágenes opcionales para campañas promocionales.
+    - Acceder directamente a la Página de Facebook para complementar la estrategia de marketing digital.

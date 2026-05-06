@@ -93,19 +93,40 @@ Este endpoint genera el Código QR. Requiere que envíes la cookie `access_token
 
 ---
 
-## 5. Módulo de Mailing (Simulación)
+## 5. Módulo de Email Marketing (Mailing)
+
+Ahora el backend soporta el envío real asíncrono y adjuntos de imagen.
 
 *   **Método:** `POST`
 *   **URL:** `http://localhost:5000/api/admin/mailing/send`
 *   **Headers:** Incluir la cookie `access_token` de Admin.
+*   **Body (form-data):**
+    *   `asunto`: "Título de la campaña"
+    *   `mensaje`: "Cuerpo del correo (soporta texto plano)"
+    *   `imagen`: (Opcional) Selecciona un archivo de imagen (PNG/JPG).
+*   **Comportamiento Esperado:** Recibirás un `200 OK`. El backend iniciará un hilo en segundo plano para enviar el correo masivo a todos los suscriptores activos. Podrás ver el progreso en los logs del contenedor (`docker logs`).
+
+---
+
+## 7. Gestión de Preferencias (Estudiante/Admin)
+
+Permite al usuario logueado decidir si quiere estar en la lista de correo.
+
+### PASO 7A: Obtener estado actual
+*   **Método:** `GET`
+*   **URL:** `http://localhost:5000/api/usuario/preferencias`
+*   **Comportamiento Esperado:** `{"suscrito_boletin": true/false}`.
+
+### PASO 7B: Actualizar suscripción
+*   **Método:** `PUT`
+*   **URL:** `http://localhost:5000/api/usuario/preferencias`
 *   **Body (raw JSON):**
     ```json
     {
-      "asunto": "Nuevas ofertas de Cursos",
-      "mensaje": "Hola! Queremos informarte que..."
+      "suscrito_boletin": true
     }
     ```
-*   **Comportamiento Esperado:** Recibirás un `200 OK` indicando a cuántos destinatarios se "envió". Además, **si miras la consola/logs del backend (`docker logs xgboost-course-prediction-backend-1`)**, verás el resumen impreso confirmando los correos que se usaron en el envío simulado.
+*   **Comportamiento Esperado:** `200 OK` con el mensaje de éxito. Esto sincroniza tanto la tabla `usuarios` como `boletin_informativo`.
 
 ---
 

@@ -1,10 +1,13 @@
-import React from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap, Settings, Menu, X, LogOut, ArrowLeft } from 'lucide-react';
+import ThemeToggle from '../../components/ThemeToggle';
 
 const DashboardLayout = () => {
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const getLinkStyle = (path) => ({
     display: 'flex',
@@ -22,18 +25,62 @@ const DashboardLayout = () => {
 
   const isAdmin = user.rol === 'Administrador';
 
-  return (
-    <div style={{ display: 'flex', minHeight: '80vh', backgroundColor: 'var(--bg-page)', transition: 'background-color 0.3s' }}>
-      {/* Sidebar */}
-      <aside style={{ width: '250px', backgroundColor: 'var(--color-primary-dark)', padding: '2rem 1rem', color: 'white' }}>
-        <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'white' }}>
-          {isAdmin ? 'Admin Panel' : 'Panel de Estudiante'}
-        </h2>
-        <p style={{ fontSize: '0.9rem', color: 'var(--color-accent)', marginBottom: '3rem' }}>
-          {user.nombre} ({user.rol})
-        </p>
+  const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
-        <nav>
+  const handleLogout = () => {
+    sessionStorage.removeItem('isLoggedIn');
+    sessionStorage.removeItem('user');
+    navigate('/login');
+  };
+
+  return (
+    <div className="dashboard-container">
+      {/* Header Móvil - Ahora es el único header visible en el dashboard */}
+      <header className="dashboard-header-mobile">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <GraduationCap size={24} color="var(--color-accent-light)" />
+          <span style={{ fontWeight: 'bold' }}>Panel {isAdmin ? 'Admin' : 'Estudiante'}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <ThemeToggle />
+          <button 
+            onClick={toggleSidebar}
+            style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          >
+            {isSidebarOpen ? <X size={28} /> : <Menu size={28} />}
+          </button>
+        </div>
+      </header>
+
+      {/* Sidebar */}
+      <aside className={`dashboard-sidebar ${isSidebarOpen ? 'open' : ''}`}>
+        <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'white' }}>
+              Autopoiesis
+            </h2>
+            <p style={{ fontSize: '0.9rem', color: 'var(--color-accent-light)', marginBottom: '1rem' }}>
+              {user.nombre}
+            </p>
+          </div>
+          <div className="desktop-only" style={{ marginTop: '0.2rem' }}>
+            <ThemeToggle />
+          </div>
+        </div>
+
+        <div className="mobile-only" style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
+          <div style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.1)', display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'white' }}>
+            {user.rol}
+          </div>
+        </div>
+
+        <div className="desktop-only" style={{ marginBottom: '2rem' }}>
+          <div style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.1)', display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'white' }}>
+            {user.rol}
+          </div>
+        </div>
+
+        <nav onClick={() => setSidebarOpen(false)}>
           {isAdmin ? (
             <>
               <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
@@ -55,16 +102,45 @@ const DashboardLayout = () => {
             </Link>
           )}
 
-          <div style={{ margin: '2rem 0', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ margin: '1.5rem 0', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
           
+          <Link to="/dashboard/preferencias" style={getLinkStyle('/dashboard/preferencias')}>
+            <Settings size={18} /> Perfil y Preferencias
+          </Link>
           <Link to="/dashboard/seguridad" style={getLinkStyle('/dashboard/seguridad')}>
             <ShieldCheck size={18} /> Seguridad (2FA)
           </Link>
+
+          <div style={{ margin: '1.5rem 0', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+          
+          {/* Enlaces de salida */}
+          <Link to="/" style={getLinkStyle('/ext-home')}>
+            <ArrowLeft size={18} /> Volver a la Web
+          </Link>
+          <button 
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.8rem',
+              padding: '1rem',
+              backgroundColor: 'rgba(231, 76, 60, 0.2)',
+              color: '#ff7675',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 500,
+              marginTop: '1rem'
+            }}
+          >
+            <LogOut size={18} /> Cerrar Sesión
+          </button>
         </nav>
       </aside>
 
       {/* Main Content */}
-      <section style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+      <main className="dashboard-main">
         
         {/* Banner de Verificación de Correo */}
         {user.email_verificado === false && (
@@ -82,30 +158,28 @@ const DashboardLayout = () => {
             <div>
               <h4 style={{ color: '#f39c12', margin: '0 0 0.25rem 0' }}>Verifica tu correo electrónico</h4>
               <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                Por favor revisa tu bandeja de entrada y verifica tu correo electrónico para garantizar la recepción de tus certificados.
+                Por favor revisa tu bandeja de entrada para garantizar la recepción de tus certificados.
               </p>
             </div>
           </div>
         )}
 
-        <div style={{
-          backgroundColor: 'var(--panel-bg)',
-          borderRadius: '12px',
-          padding: '2rem',
-          minHeight: '60vh',
-          boxShadow: '0 4px 6px var(--glass-shadow)',
-          transition: 'background-color 0.3s, box-shadow 0.3s'
-        }}>
+        <div className="dashboard-content-card">
           {isAdmin || location.pathname !== '/dashboard' ? (
             <Outlet />
           ) : (
-            <div style={{ textAlign: 'center', marginTop: '4rem' }}>
+            <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+              <div style={{ backgroundColor: 'rgba(127, 43, 128, 0.05)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
+                <GraduationCap size={40} color="var(--color-primary)" />
+              </div>
               <h2 style={{ color: 'var(--text-main)', marginBottom: '1rem' }}>¡Bienvenido a tu Espacio de Aprendizaje!</h2>
-              <p style={{ color: 'var(--text-muted)' }}>Próximamente podrás ver tus cursos inscritos y materiales de estudio aquí.</p>
+              <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto' }}>
+                Aquí podrás gestionar tus cursos, certificaciones y preferencias de comunicación. Explora el menú lateral para comenzar.
+              </p>
             </div>
           )}
         </div>
-      </section>
+      </main>
     </div>
   );
 };

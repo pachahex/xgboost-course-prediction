@@ -79,4 +79,34 @@ El modelo utiliza estas variables para explicar las proyecciones de demanda:
 El sistema utiliza variables de entorno (`FRONTEND_URL`, `MAIL_PASSWORD`) para que los enlaces de correo funcionen tanto en desarrollo local como en producción (Nube), manteniendo la escalabilidad del proyecto.
 
 ---
+---
+*Próximo módulo a documentar: Inscripciones y Seguimiento de Ventas.*
+
+## 3. Módulo: Email Marketing y Gestión de Campañas (Mailing)
+**Ubicación:** `frontend/src/pages/dashboard/Mailing.jsx`
+
+Este módulo permite al Administrador interactuar proactivamente con la base de datos de usuarios interesados. Actúa como el **disparador de demanda (Demand Driver)**, convirtiendo las predicciones de la IA en acciones de ventas reales.
+
+### 📊 Relación con XGBoost (Control de Sesgo y Estímulo de Demanda)
+
+El envío de correos masivos genera una variable externa que el modelo debe considerar para no sesgar sus futuras predicciones:
+
+| Funcionalidad | Uso en Marketing | Valor para el Ciclo de IA |
+| :--- | :--- | :--- |
+| **Envío de Boletín** | Notifica lanzamientos de cursos. | Genera picos de inscripción que deben ser etiquetados como "Impulsados por Campaña" para no confundirlos con demanda orgánica. |
+| **Adjunto de Imagen** | Flyers y material visual (AIDA). | El uso de material gráfico aumenta la tasa de conversión (CTR), impactando directamente en la velocidad de llenado de un programa. |
+| **Gestión de Preferencias** | Respeto a la privacidad (Opt-in). | Asegura que el modelo aprenda de usuarios que tienen una **intención de compra activa** (quieren recibir noticias). |
+
+### 💡 Estrategia de Marketing Digital
+El módulo integra una sección de **Estrategia** que vincula el correo electrónico con la presencia en Redes Sociales (Facebook). Esto permite al administrador:
+1.  **Omnicanalidad**: Reforzar el mensaje enviado por correo con publicaciones en la página oficial de la Academia.
+2.  **Conversión Directa**: Incluir enlaces a los programas que la IA identificó con alta probabilidad de éxito, maximizando el Retorno de Inversión (ROI).
+
+### 🛠️ Flujo de Operación
+1.  **Admin** revisa el módulo de **IA Predictiva** para ver qué curso tiene mayor potencial de demanda la próxima semana.
+2.  **Admin** redacta una campaña en el módulo de **Mailing**, adjunta el flyer promocional y lo envía.
+3.  **Backend** procesa el envío de forma asíncrona a todos los suscriptores activos en la base de datos.
+4.  **Usuario** recibe el correo y se inscribe, generando un dato de "Venta Real" que cerrará el círculo de entrenamiento para la IA.
+
+---
 *Próximo módulo a documentar: Inscripciones y Seguimiento de Ventas.*

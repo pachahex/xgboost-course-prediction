@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 import { Home, BookOpen, GraduationCap, LayoutDashboard, LogOut, LogIn, UserPlus, Menu, X } from 'lucide-react';
 import logo from '../assets/logo.svg';
@@ -7,7 +7,13 @@ import logo from '../assets/logo.svg';
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
+
+  // Si estamos en el dashboard, no mostramos el navbar principal público
+  if (location.pathname.startsWith('/dashboard')) {
+    return null;
+  }
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
@@ -91,7 +97,7 @@ const Navbar = () => {
         <img src={logo} alt="Autopoiesis Logo" style={logoImgStyle} />
         <h1 style={logoTextStyle}>Autopoiesis</h1>
       </Link>
-      
+
       <button className="mobile-menu-btn" onClick={toggleMenu} aria-label="Menu">
         {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
       </button>
@@ -100,14 +106,14 @@ const Navbar = () => {
         <Link to="/" style={linkItemStyle} onClick={closeMenu}><Home size={18} /> Inicio</Link>
         <Link to="/cursos" style={linkItemStyle} onClick={closeMenu}><BookOpen size={18} /> Cursos</Link>
         <Link to="/diplomados" style={linkItemStyle} onClick={closeMenu}><GraduationCap size={18} /> Diplomados</Link>
-        
+
         <div className="nav-desktop-actions">
           {isLoggedIn ? (
             <>
               <Link to="/dashboard" style={linkItemStyle} onClick={closeMenu}><LayoutDashboard size={18} /> Panel</Link>
-              <button 
-                onClick={handleLogout} 
-                style={{...buttonStyle, backgroundColor: '#e74c3c', color: 'white'}}
+              <button
+                onClick={handleLogout}
+                style={{ ...buttonStyle, backgroundColor: '#e74c3c', color: 'white' }}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
@@ -119,9 +125,9 @@ const Navbar = () => {
               <Link to="/login" style={linkItemStyle} onClick={closeMenu}>
                 <LogIn size={18} /> Ingresar
               </Link>
-              <Link to="/registro" style={{textDecoration: 'none'}} onClick={closeMenu}>
-                <button 
-                  style={{...buttonStyle, backgroundColor: 'var(--color-primary)', color: 'white'}}
+              <Link to="/registro" style={{ textDecoration: 'none' }} onClick={closeMenu}>
+                <button
+                  style={{ ...buttonStyle, backgroundColor: 'var(--color-primary)', color: 'white' }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >

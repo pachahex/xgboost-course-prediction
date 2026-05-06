@@ -12,7 +12,7 @@ import pyotp
 import qrcode
 import base64
 from io import BytesIO
-from utils.email import mail, send_verification_email, send_reset_password_email
+from utils.email import mail, send_verification_email, send_reset_password_email, send_mass_mailing
 
 app = Flask(__name__)
 # Configuracion de Archivos
@@ -819,35 +819,89 @@ def verify_2fa_setup():
             else:
                 return jsonify({"error": "Código incorrecto."}), 400
 
+@app.route('/api/usuario/preferencias', methods=['GET'])
+@auth_required
+def get_user_preferences():
+    user_id = request.user_info['sub']
+    with get_db_connection() as conn:
+        suscrito = conn.execute(text("SELECT suscrito_boletin FROM usuarios WHERE id = :uid"), {"uid": user_id}).scalar()
+    return jsonify({"suscrito_boletin": bool(suscrito)})
+
+@app.route('/api/usuario/preferencias', methods=['PUT'])
+@auth_required
+def update_user_preferences():
+    user_id = request.user_info['sub']
+    data = request.json
+    suscrito = data.get('suscrito_boletin', False)
+    
+    with get_db_connection() as conn:
+        with conn.begin():
+            # Obtener el correo del usuario
+            correo = conn.execute(text("SELECT correo FROM usuarios WHERE id = :uid"), {"uid": user_id}).scalar()
+            
+            # 1. Actualizar tabla usuarios
+            conn.execute(text("UPDATE usuarios SET suscrito_boletin = :sub WHERE id = :uid"), {"sub": suscrito, "uid": user_id})
+            
+            # 2. Actualizar tabla boletin_informativo (crear o actualizar)
+            if suscrito:
+                conn.execute(text("""
+                    INSERT INTO boletin_informativo (correo, usuario_id, activo)
+                    VALUES (:correo, :uid, true)
+                    ON CONFLICT (correo) DO UPDATE SET activo = true, usuario_id = EXCLUDED.usuario_id
+                """), {"correo": correo, "uid": user_id})
+            else:
+                conn.execute(text("""
+                    UPDATE boletin_informativo SET activo = false WHERE correo = :correo
+                """), {"correo": correo})
+                
+    return jsonify({"message": "Preferencias actualizadas con éxito.", "suscrito_boletin": suscrito})
+
 @app.route('/api/admin/mailing/send', methods=['POST'])
 @admin_required
 def send_mailing():
-    """Simulación de envío masivo de correos a suscriptores"""
-    data = request.json
-    asunto = data.get('asunto')
-    mensaje = data.get('mensaje')
+    """Envío masivo de correos a suscriptores con imagen opcional"""
+    # Usar request.form ya que puede venir como multipart/form-data
+    if request.content_type and request.content_type.startswith('multipart/form-data'):
+        asunto = request.form.get('asunto')
+        mensaje = request.form.get('mensaje')
+        imagen = request.files.get('imagen')
+    else:
+        data = request.json or {}
+        asunto = data.get('asunto')
+        mensaje = data.get('mensaje')
+        imagen = None
     
     if not asunto or not mensaje:
         return jsonify({"error": "Asunto y mensaje son requeridos."}), 400
         
     with get_db_connection() as conn:
-        suscriptores = conn.execute(text("SELECT correo FROM boletin_informativo WHERE activo = true")).fetchall()
+        # Obtener los correos de los suscriptores activos
+        suscriptores_records = conn.execute(text("SELECT correo FROM boletin_informativo WHERE activo = true")).fetchall()
         
-    total_enviados = len(suscriptores)
+    destinatarios = [s.correo for s in suscriptores_records]
+    total_enviados = len(destinatarios)
     
-    # Aquí iría la integración con SMTP, SendGrid, o AWS SES
-    # Ejemplo: mailer.send_mass(asunto, mensaje, [s.correo for s in suscriptores])
+    if total_enviados == 0:
+        return jsonify({"error": "No hay suscriptores activos para enviar la campaña."}), 400
+
+    file_content = None
+    filename = None
+    file_mimetype = None
     
-    # Para la simulación, simplemente imprimimos en la terminal del backend
-    print(f"\n[MAILING SIMULATION] Preparando envío a {total_enviados} suscriptores...")
-    print(f"[MAILING SIMULATION] Asunto: {asunto}")
-    print(f"[MAILING SIMULATION] Mensaje fragmento: {mensaje[:50]}...")
-    for s in suscriptores:
-        print(f" -> Correo enviado a: {s[0]}")
-    print("[MAILING SIMULATION] Envío finalizado.\n")
+    if imagen and imagen.filename:
+        filename = secure_filename(imagen.filename)
+        file_mimetype = imagen.content_type
+        file_content = imagen.read() # Leemos el binario en memoria
+        
+    # Enviar de forma asíncrona usando la función que preparamos en utils/email.py
+    import __main__ # Para evitar problemas de contexto, usamos current_app si estamos dentro del request
+    from flask import current_app
+    app_instance = current_app._get_current_object()
+    
+    send_mass_mailing(app_instance, asunto, mensaje, destinatarios, filename, file_content, file_mimetype)
     
     return jsonify({
-        "message": "Campaña enviada exitosamente.",
+        "message": "Campaña enviada exitosamente a la cola de envío.",
         "destinatarios": total_enviados
     })
 

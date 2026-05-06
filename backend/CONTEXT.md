@@ -31,3 +31,11 @@ Al generar, refactorizar o debuggear código en este directorio, la IA debe cump
     - **Visibilidad Web (`activo`)**: Controlada por el checkbox del formulario (Marketing).
     - **Borrado del Sistema (`eliminado`)**: Gestionado vía `DELETE`. Oculta el registro de TODAS las interfaces de usuario (Dashboard y Web) pero lo mantiene en la DB para preservar la integridad histórica del modelo XGBoost.
     - **Migraciones en Docker**: Cualquier cambio estructural en la DB debe ejecutarse mediante `docker exec` en el contenedor `db` para asegurar la persistencia correcta.
+
+## 📧 Módulo de Email Marketing (Mailing)
+- **Envío Masivo Asíncrono**: El backend utiliza un sistema de hilos (`threading.Thread`) para procesar el envío de correos masivos sin bloquear el hilo principal de Flask. 
+- **Gestión de Suscriptores**: 
+    - Las campañas se envían a los registros en `boletin_informativo` donde `activo = true`.
+    - Los usuarios (Estudiantes) pueden gestionar su propio estado mediante los endpoints `/api/usuario/preferencias`, los cuales mantienen sincronizada la tabla `usuarios` y `boletin_informativo`.
+- **Soporte de Adjuntos**: El sistema soporta el envío de una imagen adjunta (Marketing flyers) mediante `multipart/form-data`. Las imágenes se leen en memoria y se adjuntan al objeto `Message` de `Flask-Mail`.
+- **Seguridad**: El acceso al envío masivo está restringido estrictamente a Administradores mediante el decorador `@admin_required`.
