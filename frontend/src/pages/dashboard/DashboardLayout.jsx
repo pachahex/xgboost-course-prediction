@@ -64,7 +64,30 @@ const DashboardLayout = () => {
       </aside>
 
       {/* Main Content */}
-      <section style={{ flex: 1, padding: '2rem' }}>
+      <section style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+        
+        {/* Banner de Verificación de Correo */}
+        {user.email_verificado === false && (
+          <div style={{
+            backgroundColor: 'rgba(243, 156, 18, 0.1)',
+            borderLeft: '4px solid #f39c12',
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <Mail color="#f39c12" size={24} />
+            <div>
+              <h4 style={{ color: '#f39c12', margin: '0 0 0.25rem 0' }}>Verifica tu correo electrónico</h4>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                Por favor revisa tu bandeja de entrada y verifica tu correo electrónico para garantizar la recepción de tus certificados.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div style={{
           backgroundColor: 'var(--panel-bg)',
           borderRadius: '12px',

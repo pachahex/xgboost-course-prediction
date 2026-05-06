@@ -12,6 +12,7 @@ import pyotp
 import qrcode
 import base64
 from io import BytesIO
+from utils.email import mail, send_verification_email, send_reset_password_email
 
 app = Flask(__name__)
 # Configuracion de Archivos
@@ -24,6 +25,16 @@ CORS(app, supports_credentials=True, origins=["http://localhost:3000", "http://1
 
 # En un entorno real debe ir en .env
 SECRET_KEY = os.getenv("SECRET_KEY", "autopoiesis_super_secret_dev_key")
+
+# Configuracion de Email
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@autopoiesis.com')
+
+mail.init_app(app)
 
 def admin_required(f):
     """Decorador para proteger rutas requiriendo el rol de Administrador usando JWT en Cookies HTTP-Only"""
@@ -68,6 +79,25 @@ def auth_required(f):
     return wrap
 
 # ==========================================
+# UTILIDADES JWT PARA EMAILS
+# ==========================================
+def create_email_token(email, exp_hours=24):
+    payload = {
+        'email': email,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=exp_hours)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+def decode_email_token(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        return payload['email']
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+# ==========================================
 # RUTAS DE AUTENTICACIÓN Y REGISTRO
 # ==========================================
 
@@ -80,10 +110,10 @@ def registro():
     password = data.get('password')
     telefono = data.get('telefono')
     fecha_nacimiento = data.get('fecha_nacimiento')
-    ocupacion = data.get('ocupacion')
+    grado_academico_id = data.get('grado_academico_id')
     departamento_id = data.get('departamento_id')
     
-    if not all([nombre, correo, password, fecha_nacimiento, departamento_id]):
+    if not all([nombre, correo, password, fecha_nacimiento, departamento_id, grado_academico_id]):
         return jsonify({"error": "Faltan campos obligatorios."}), 400
         
     with get_db_connection() as conn:
@@ -101,20 +131,27 @@ def registro():
             hash_pwd = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
             conn.execute(text("""
-                INSERT INTO usuarios (rol_id, departamento_id, nombre_completo, correo, hash_contrasena, telefono, ocupacion, fecha_nacimiento)
-                VALUES (:rid, :dep_id, :nombre, :correo, :pwd, :tel, :ocu, :fnac)
+                INSERT INTO usuarios (rol_id, departamento_id, grado_academico_id, nombre_completo, correo, hash_contrasena, telefono, fecha_nacimiento)
+                VALUES (:rid, :dep_id, :grado_id, :nombre, :correo, :pwd, :tel, :fnac)
             """), {
                 "rid": rol_id, 
                 "dep_id": departamento_id, 
+                "grado_id": grado_academico_id,
                 "nombre": nombre, 
                 "correo": correo, 
                 "pwd": hash_pwd,
                 "tel": telefono,
-                "ocu": ocupacion,
                 "fnac": fecha_nacimiento
             })
             
-    return jsonify({"message": "Registro exitoso. Ya puedes iniciar sesión."}), 201
+    # Intentar enviar el correo (no bloquea el registro si falla en dev)
+    try:
+        token = create_email_token(correo, 24)
+        send_verification_email(correo, nombre, token)
+    except Exception as e:
+        print(f"Error enviando correo de verificación: {e}")
+            
+    return jsonify({"message": "Registro exitoso. Revisa tu bandeja de entrada para verificar tu correo."}), 201
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -127,7 +164,7 @@ def login():
         
     with get_db_connection() as conn:
         res = conn.execute(text("""
-            SELECT u.id, u.hash_contrasena, r.nombre as rol_nombre, u.nombre_completo, u.totp_enabled 
+            SELECT u.id, u.hash_contrasena, r.nombre as rol_nombre, u.nombre_completo, u.totp_enabled, u.email_verificado
             FROM usuarios u
             JOIN roles r ON u.rol_id = r.id
             WHERE u.correo = :correo
@@ -136,7 +173,7 @@ def login():
     if not res:
         return jsonify({"error": "Credenciales inválidas."}), 401
         
-    user_id, hash_bd, rol_nombre, nombre, totp_enabled = res
+    user_id, hash_bd, rol_nombre, nombre, totp_enabled, email_verificado = res
     
     # Validar contraseña bcrypt
     if bcrypt.checkpw(password.encode('utf-8'), hash_bd.encode('utf-8')):
@@ -166,7 +203,7 @@ def login():
         
         resp = make_response(jsonify({
             "message": "Login exitoso",
-            "user": {"nombre": nombre, "rol": rol_nombre}
+            "user": {"nombre": nombre, "rol": rol_nombre, "email_verificado": email_verificado}
         }))
         
         resp.set_cookie(
@@ -213,6 +250,12 @@ def verify_2fa():
         # Verificar código con pyotp (valid_window=2 para tolerar desfases de tiempo en Docker)
         totp = pyotp.TOTP(totp_secret)
         if totp.verify(totp_code, valid_window=2):
+            
+            # Recuperar email_verificado adicionalmente
+            with get_db_connection() as conn:
+                res_email = conn.execute(text("SELECT email_verificado FROM usuarios WHERE id = :uid"), {"uid": user_id}).fetchone()
+            email_verificado = res_email.email_verificado if res_email else False
+            
             # Emitir cookie final
             payload = {
                 "sub": user_id,
@@ -224,7 +267,7 @@ def verify_2fa():
             
             resp = make_response(jsonify({
                 "message": "Login exitoso",
-                "user": {"nombre": nombre, "rol": rol_nombre}
+                "user": {"nombre": nombre, "rol": rol_nombre, "email_verificado": email_verificado}
             }))
             
             resp.set_cookie(
@@ -242,6 +285,69 @@ def verify_2fa():
         return jsonify({"error": "El tiempo para ingresar el código expiró."}), 401
     except jwt.InvalidTokenError:
         return jsonify({"error": "Token temporal inválido."}), 401
+
+# ==========================================
+# RUTAS DE CORREO (VERIFICACIÓN Y RESET)
+# ==========================================
+
+@app.route('/api/verificar-email', methods=['POST'])
+def verificar_email():
+    token = request.json.get('token')
+    if not token:
+        return jsonify({"error": "Token ausente"}), 400
+        
+    correo = decode_email_token(token)
+    if not correo:
+        return jsonify({"error": "Token inválido o expirado"}), 400
+        
+    with get_db_connection() as conn:
+        with conn.begin():
+            res = conn.execute(text("UPDATE usuarios SET email_verificado = true WHERE correo = :correo RETURNING id"), {"correo": correo}).fetchone()
+            if not res:
+                return jsonify({"error": "Usuario no encontrado"}), 404
+                
+    return jsonify({"message": "Correo verificado exitosamente"}), 200
+
+@app.route('/api/olvide-password', methods=['POST'])
+def olvide_password():
+    correo = request.json.get('correo')
+    if not correo:
+        return jsonify({"error": "Correo obligatorio"}), 400
+        
+    with get_db_connection() as conn:
+        user = conn.execute(text("SELECT nombre_completo FROM usuarios WHERE correo = :correo"), {"correo": correo}).fetchone()
+        
+    # Siempre retornamos exito para evitar enumeración de correos
+    if user:
+        nombre = user.nombre_completo
+        try:
+            token = create_email_token(correo, exp_hours=1)
+            send_reset_password_email(correo, nombre, token)
+        except Exception as e:
+            print(f"Error enviando correo de reset: {e}")
+            
+    return jsonify({"message": "Si el correo está registrado, recibirás un enlace de recuperación."}), 200
+
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    data = request.json
+    token = data.get('token')
+    new_password = data.get('password')
+    
+    if not token or not new_password:
+        return jsonify({"error": "Faltan datos"}), 400
+        
+    correo = decode_email_token(token)
+    if not correo:
+        return jsonify({"error": "Token inválido o expirado"}), 400
+        
+    hash_pwd = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    with get_db_connection() as conn:
+        with conn.begin():
+            conn.execute(text("UPDATE usuarios SET hash_contrasena = :pwd WHERE correo = :correo"), {"pwd": hash_pwd, "correo": correo})
+            
+    return jsonify({"message": "Contraseña actualizada exitosamente."}), 200
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -275,6 +381,14 @@ def get_public_departamentos():
         result = conn.execute(text("SELECT id, nombre FROM departamentos ORDER BY id")).fetchall()
         departamentos = [{"id": r.id, "nombre": r.nombre} for r in result]
     return jsonify(departamentos)
+
+@app.route('/api/grados-academicos', methods=['GET'])
+def get_public_grados():
+    """Retorna la lista de grados académicos para el formulario de registro"""
+    with get_db_connection() as conn:
+        result = conn.execute(text("SELECT id, nombre FROM grados_academicos ORDER BY id")).fetchall()
+        grados = [{"id": r.id, "nombre": r.nombre} for r in result]
+    return jsonify(grados)
 
 @app.route('/api/programas', methods=['GET'])
 def get_public_programas():
@@ -597,11 +711,13 @@ def get_catalogos():
         tipos = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM tipos_servicio")).fetchall()]
         modalidades = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM modalidades")).fetchall()]
         beneficios = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM beneficios")).fetchall()]
+        grados_academicos = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM grados_academicos")).fetchall()]
     return jsonify({
         "categorias": categorias, 
         "tipos_servicio": tipos,
         "modalidades": modalidades,
-        "beneficios": beneficios
+        "beneficios": beneficios,
+        "grados_academicos": grados_academicos
     })
 
 

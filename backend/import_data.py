@@ -34,18 +34,20 @@ def run_import():
             # 2. Inserción de Usuario Administrador Principal
             print("Insertando Usuario Administrador...")
             admin_pwd = hash_password("admin123")
-            admin_email = 'admin@autopoiesis.com'
+            admin_email = 'juandiegomc.sis@gmail.com'
             conn.execute(text("""
-                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena) 
-                VALUES (:rid, 'Administrador Principal', :correo, :pwd)
+                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena, email_verificado) 
+                VALUES (:rid, 'Administrador Principal', :correo, :pwd, true)
                 ON CONFLICT (correo) DO NOTHING
             """), {"rid": role_map['Administrador'], "correo": admin_email, "pwd": admin_pwd})
+
             
             # 3. Mapeos de Catálogos para Programas
             print("Recuperando Catálogos (Categorías y Tipos de Servicio)...")
             cat_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM categorias"))}
             ts_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM tipos_servicio"))}
             mod_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM modalidades"))}
+            grado_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM grados_academicos"))}
             
             # 4. Poblar Catálogo de Programas
             print("Poblando Programas Reales...")

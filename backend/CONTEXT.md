@@ -22,8 +22,9 @@ Al generar, refactorizar o debuggear código en este directorio, la IA debe cump
 2.  **Autenticación y Seguridad:**
     *   No usar `localStorage` para tokens. Asumir siempre que el token JWT viene embebido de forma automática en una Cookie `HTTP-Only`.
     *   Proteger los endpoints administrativos usando exclusivamente el decorador `@admin_required`.
+    *   **Verificación y Recuperación**: El backend implementa flujos de confirmación de correo electrónico y reseteo de contraseñas mediante tokens JWT temporales (1 a 24 horas de expiración) usando `Flask-Mail`.
 3.  **Manejo de Base de Datos:** Usar SQLAlchemy (`Model.query...` o `db.session`). Nunca escribir consultas SQL en crudo a menos que sea estrictamente necesario por rendimiento analítico.
-4. **Estructura Consolidada:** La tabla `usuarios` ahora es la dueña de la información demográfica (`fecha_nacimiento`, `telefono`, `ocupacion`, `departamento_id`, `suscrito_boletin`). La tabla `inscripciones` registra la transacción, el `origen_id` y congela el precio con `costo_pagado`.
+4. **Estructura Consolidada:** La tabla `usuarios` ahora es la dueña de la información demográfica (`fecha_nacimiento`, `telefono`, `ocupacion`, `departamento_id`, `suscrito_boletin`) y metadatos de seguridad (`email_verificado`, `totp_enabled`). La tabla `inscripciones` registra la transacción, el `origen_id` y congela el precio con `costo_pagado`.
 5. **Regla de Normalización (3NF):** Las relaciones N:M siempre deben resolverse con tablas pivote (ej. `programa_facilitadores`). Los campos categóricos deben ser tablas catálogo (ej. `origenes_captacion`, `modalidades`) para asegurar compatibilidad con One-Hot Encoding en el futuro pipeline de XGBoost.
 6. **Programas Enriquecidos:** La entidad `programas` ahora soporta `modalidad_id`, fechas de vigencia, duración en horas, descripciones extendidas e imágenes, permitiendo una gestión de contenidos profesional.
 7. **Arquitectura de Gestión de Programas:**

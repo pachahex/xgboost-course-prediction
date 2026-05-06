@@ -44,4 +44,39 @@ El módulo de gestión no solo alimenta la predicción, sino que permite que el 
 > **Dato de Oro para XGBoost**: Las descripciones de los programas (aunque actualmente son texto plano) pueden ser procesadas en el futuro mediante **NLP (TF-IDF o Embeddings)** para encontrar palabras clave que "venden" más.
 
 ---
-*Próximo módulo a documentar: Inscripciones y Perfiles de Usuario.*
+*Próximo módulo a documentar: Inscripciones y Seguimiento de Ventas.*
+
+## 2. Módulo: Gestión de Usuarios y Accesos (Auth & Verification)
+**Ubicación:** `frontend/src/pages/` (`Registro.jsx`, `Login.jsx`, `VerificarEmail.jsx`, `ResetPassword.jsx`)
+
+Este módulo gestiona la entrada de **características demográficas (User Features)** y asegura la integridad del acceso. La calidad de estos datos es crítica para que el modelo XGBoost segmente la demanda basándose en perfiles de usuarios reales y verificados.
+
+### 📊 Relación con XGBoost (Calidad de Datos y Segmentación)
+
+La verificación de identidad y la validación estricta aseguran que la IA aprenda de comportamientos reales, eliminando el ruido de registros falsos o incompletos:
+
+| Funcionalidad | Impacto en Calidad de Datos | Valor para el Modelo Predictivo |
+| :--- | :--- | :--- |
+| **Validación de Edad** | Filtro de audiencia (16+) | Asegura que el modelo no se sesgue por usuarios fuera del target académico legal. |
+| **Email Verificado** | Flag Binario (0/1) | **Filtro de Entrenamiento**. El pipeline de ML ignora usuarios no verificados para evitar inflar la demanda con "bots" o correos basura. |
+| **Ocupación/Perfil** | Categorización Profesional | Variable de entrada (One-Hot) que permite predecir qué programas atraen a "Profesionales Senior" vs "Egresados". |
+| **Seguridad 2FA** | Persistencia de Usuario | Reduce la rotación de cuentas (churn) y asegura que los datos históricos de un usuario pertenecen a la misma persona. |
+
+### 💡 Explicabilidad con SHAP
+
+El modelo utiliza estas variables para explicar las proyecciones de demanda:
+
+- **Impacto de la Edad:** SHAP puede revelar que la demanda de un curso de "Tecnología" sube un 20% cuando el segmento de edad predominante es 18-25 años.
+- **Segmentación por Ocupación:** Si un diplomado tiene baja demanda, SHAP podría indicar que la variable "Estudiante" tiene un peso negativo, sugiriendo que el contenido es demasiado avanzado para ese perfil.
+
+### 🛠️ Flujo de Seguridad y Verificación
+1.  **Registro**: El usuario ingresa datos demográficos validados (Regex de nombre, edad mínima, contraseña fuerte).
+2.  **Verificación**: Se envía un token JWT vía **Flask-Mail** (SMTP). El usuario debe confirmar su cuenta para ser considerado "Válido" en el pipeline analítico.
+3.  **Recuperación**: Flujo seguro de "Olvide mi contraseña" con tokens temporales de 1 hora para mantener la continuidad del acceso.
+4.  **2FA (TOTP)**: Capa opcional de seguridad que protege el perfil del usuario, garantizando que su historial de navegación y compras sea fidedigno para el re-entrenamiento del modelo.
+
+### 🔐 Arquitectura de Despliegue
+El sistema utiliza variables de entorno (`FRONTEND_URL`, `MAIL_PASSWORD`) para que los enlaces de correo funcionen tanto en desarrollo local como en producción (Nube), manteniendo la escalabilidad del proyecto.
+
+---
+*Próximo módulo a documentar: Inscripciones y Seguimiento de Ventas.*

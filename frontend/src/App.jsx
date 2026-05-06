@@ -13,6 +13,8 @@ import IAPredictiva from './pages/dashboard/IAPredictiva';
 import GestorProgramas from './pages/dashboard/GestorProgramas';
 import Mailing from './pages/dashboard/Mailing';
 import Seguridad from './pages/dashboard/Seguridad';
+import VerificarEmail from './pages/VerificarEmail';
+import ResetPassword from './pages/ResetPassword';
 import './index.css';
 
 // Componente simple para proteger rutas
@@ -41,6 +43,8 @@ function App() {
             {/* Ruta Login y Registro */}
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
+            <Route path="/verificar-email" element={<VerificarEmail />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Rutas Privadas */}
             <Route path="/dashboard" element={

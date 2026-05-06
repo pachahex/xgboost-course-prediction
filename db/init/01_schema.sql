@@ -50,6 +50,11 @@ CREATE TABLE beneficios (
     nombre VARCHAR(100) NOT NULL UNIQUE
 );
 
+CREATE TABLE grados_academicos (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE
+);
+
 -- ==============================================================================
 
 -- 2. Fundamento: Abstracción e Integridad Referencial[cite: 4]
@@ -60,18 +65,20 @@ CREATE TABLE usuarios (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     rol_id INT NOT NULL,
     departamento_id INT,
+    grado_academico_id INT,
     nombre_completo VARCHAR(150) NOT NULL,
     correo VARCHAR(150) UNIQUE NOT NULL,
     hash_contrasena VARCHAR(255) NOT NULL,
     telefono VARCHAR(20),
-    ocupacion VARCHAR(100),
     fecha_nacimiento DATE,
     totp_secret VARCHAR(50),
     totp_enabled BOOLEAN DEFAULT false,
     suscrito_boletin BOOLEAN DEFAULT false,
+    email_verificado BOOLEAN DEFAULT false,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_usuario_rol FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_usuario_departamento FOREIGN KEY (departamento_id) REFERENCES departamentos(id) ON DELETE RESTRICT
+    CONSTRAINT fk_usuario_departamento FOREIGN KEY (departamento_id) REFERENCES departamentos(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_usuario_grado FOREIGN KEY (grado_academico_id) REFERENCES grados_academicos(id) ON DELETE RESTRICT
     -- Fundamento: Integridad Referencial mediante FK (Llave Foránea)[cite: 4]. 
     -- 'ON DELETE RESTRICT' aplica el principio de prevención de datos huérfanos[cite: 4]. 
     -- No se puede borrar un rol si existen usuarios asignados a él[cite: 4].
@@ -260,4 +267,8 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO beneficios (nombre) VALUES 
 ('Material Digital'), ('Sesiones Grabadas'), ('Certificado de Aprobación'), ('Tutoría Personalizada') 
+ON CONFLICT DO NOTHING;
+
+INSERT INTO grados_academicos (nombre) VALUES 
+('Estudiante'), ('Egresado'), ('Profesional'), ('Otros') 
 ON CONFLICT DO NOTHING;

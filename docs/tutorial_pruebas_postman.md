@@ -106,3 +106,45 @@ Este endpoint genera el Código QR. Requiere que envíes la cookie `access_token
     }
     ```
 *   **Comportamiento Esperado:** Recibirás un `200 OK` indicando a cuántos destinatarios se "envió". Además, **si miras la consola/logs del backend (`docker logs xgboost-course-prediction-backend-1`)**, verás el resumen impreso confirmando los correos que se usaron en el envío simulado.
+
+---
+
+## 6. Módulo de Seguridad: Verificación y Recuperación
+
+### A. Verificación de Email (Simulación de link)
+Cuando te registras, recibes un token JWT en tu correo. Para probar el endpoint manualmente:
+
+*   **Método:** `POST`
+*   **URL:** `http://localhost:5000/api/verificar-email`
+*   **Body (raw JSON):**
+    ```json
+    {
+      "token": "pega_aqui_el_token_que_viste_en_el_enlace_del_correo"
+    }
+    ```
+*   **Comportamiento Esperado:** `200 OK` con el mensaje "Email verificado con éxito".
+
+### B. Solicitar Recuperación (Olvidé mi contraseña)
+*   **Método:** `POST`
+*   **URL:** `http://localhost:5000/api/olvide-password`
+*   **Body (raw JSON):**
+    ```json
+    {
+      "correo": "tu_correo@gmail.com"
+    }
+    ```
+*   **Comportamiento Esperado:** `200 OK`. El backend enviará el correo de recuperación.
+
+### C. Resetear Contraseña con Token
+*   **Método:** `POST`
+*   **URL:** `http://localhost:5000/api/reset-password`
+*   **Body (raw JSON):**
+    ```json
+    {
+      "token": "token_recibido_en_el_correo_de_recuperacion",
+      "new_password": "NuevaPasswordFuerte123!"
+    }
+    ```
+*   **Comportamiento Esperado:** `200 OK` con el mensaje "Contraseña actualizada correctamente".
+
+---

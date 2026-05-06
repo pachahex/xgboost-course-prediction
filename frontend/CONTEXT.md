@@ -24,3 +24,12 @@
     - **Visibilidad Web**: Se controla mediante el campo `activo` (Checkbox en el formulario).
     - **Borrado Lógico**: Se ejecuta mediante el botón de basura (`DELETE`). El programa desaparece de la vista del usuario pero persiste en la DB para entrenamiento de XGBoost.
 - **Optimización de UI**: La vista de lista prioriza la densidad de datos sobre la estética de tarjetas, permitiendo búsquedas y filtrados rápidos.
+
+## 🔐 Autenticación y Registro
+- **Restricciones de Negocio**:
+    - **Edad**: Los estudiantes deben tener mínimo 16 años.
+    - **Nombres**: Deben incluir al menos dos palabras reales para asegurar la calidad de los certificados de culminación.
+- **Seguridad**:
+    - **Contraseñas**: Mínimo 8 caracteres, mayúscula, minúscula, número y símbolo. Formularios compatibles con gestores de contraseñas (`autoComplete="new-password"`).
+    - **Verificación de Correo**: Todo registro desencadena el envío de un email. Los usuarios sin verificar verán un "Banner Constante" en el DashboardLayout.
+    - **Recuperación**: Proceso "Forgot Password" integrado fluidamente en la vista de Login (Step 4).
