@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap, Settings, Menu, X, LogOut, ArrowLeft } from 'lucide-react';
+import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap, Settings, Menu, X, LogOut, ArrowLeft, List } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 
 const DashboardLayout = () => {
@@ -8,6 +8,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isProgramasOpen, setIsProgramasOpen] = useState(true); // Abierto por defecto
 
   const getLinkStyle = (path) => ({
     display: 'flex',
@@ -83,9 +84,55 @@ const DashboardLayout = () => {
         <nav onClick={() => setSidebarOpen(false)}>
           {isAdmin ? (
             <>
-              <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
-                <Home size={18} /> Gestión de Programas
-              </Link>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsProgramasOpen(!isProgramasOpen);
+                  }}
+                  style={{
+                    ...getLinkStyle(location.pathname.startsWith('/dashboard') && !['/dashboard/inscripciones', '/dashboard/ia-predictiva', '/dashboard/mailing'].includes(location.pathname) ? location.pathname : '/dashboard'),
+                    width: '100%',
+                    border: 'none',
+                    cursor: 'pointer',
+                    justifyContent: 'space-between',
+                    backgroundColor: location.pathname === '/dashboard' || location.pathname === '/dashboard/beneficios' ? 'rgba(255,255,255,0.05)' : 'transparent',
+                    color: location.pathname === '/dashboard' || location.pathname === '/dashboard/beneficios' ? 'white' : '#aaa'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                    <Home size={18} /> Gestión Académica
+                  </div>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>{isProgramasOpen ? '▲' : '▼'}</span>
+                </button>
+                
+                {isProgramasOpen && (
+                  <div style={{ paddingLeft: '1.5rem', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <Link 
+                      to="/dashboard" 
+                      style={{ 
+                        ...getLinkStyle('/dashboard'), 
+                        padding: '0.7rem 1rem', 
+                        fontSize: '0.9rem',
+                        backgroundColor: location.pathname === '/dashboard' ? 'var(--color-accent)' : 'transparent'
+                      }}
+                    >
+                      <GraduationCap size={16} /> Programas
+                    </Link>
+                    <Link 
+                      to="/dashboard/beneficios" 
+                      style={{ 
+                        ...getLinkStyle('/dashboard/beneficios'), 
+                        padding: '0.7rem 1rem', 
+                        fontSize: '0.9rem',
+                        backgroundColor: location.pathname === '/dashboard/beneficios' ? 'var(--color-accent)' : 'transparent'
+                      }}
+                    >
+                      <List size={16} /> Catálogo Beneficios
+                    </Link>
+                  </div>
+                )}
+              </div>
               <Link to="/dashboard/inscripciones" style={getLinkStyle('/dashboard/inscripciones')}>
                 <ClipboardList size={18} /> Registro Histórico
               </Link>

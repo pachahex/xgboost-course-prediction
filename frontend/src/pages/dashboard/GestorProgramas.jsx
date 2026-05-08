@@ -391,14 +391,15 @@ const GestorProgramas = () => {
                 </div>
               </div>
 
+              <div>
+                <label style={labelStyle}>Modalidad</label>
+                <select required value={formData.modalidad_id} onChange={(e) => setFormData({ ...formData, modalidad_id: e.target.value })} style={inputStyle}>
+                  <option value="">Selecciona modalidad...</option>
+                  {modalidades.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                </select>
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Modalidad</label>
-                  <select required value={formData.modalidad_id} onChange={(e) => setFormData({ ...formData, modalidad_id: e.target.value })} style={inputStyle}>
-                    <option value="">Selecciona...</option>
-                    {modalidades.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                  </select>
-                </div>
                 <div style={{ flex: 1 }}>
                   <label style={labelStyle}>Costo (Bs.)</label>
                   <input
@@ -410,20 +411,26 @@ const GestorProgramas = () => {
                     style={inputStyle}
                   />
                 </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Duración (Horas)</label>
+                  <input 
+                    type="number" 
+                    placeholder="Ej. 40" 
+                    value={formData.duracion_horas} 
+                    onChange={(e) => setFormData({ ...formData, duracion_horas: e.target.value })} 
+                    style={inputStyle} 
+                  />
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Inicio</label>
+                  <label style={labelStyle}>Fecha Inicio</label>
                   <input type="date" value={formData.fecha_inicio} onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })} style={inputStyle} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Fin</label>
+                  <label style={labelStyle}>Fecha Fin</label>
                   <input type="date" value={formData.fecha_fin} onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })} style={inputStyle} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Horas</label>
-                  <input type="number" placeholder="Hrs" value={formData.duracion_horas} onChange={(e) => setFormData({ ...formData, duracion_horas: e.target.value })} style={inputStyle} />
                 </div>
               </div>
 

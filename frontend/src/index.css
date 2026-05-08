@@ -354,15 +354,20 @@ button:hover {
 @media (min-width: 768px) {
   .dashboard-container {
     flex-direction: row;
+    height: 100vh;
+    overflow: hidden;
   }
 
   .dashboard-sidebar {
-    display: block;
+    display: flex;
+    flex-direction: column;
     width: 260px;
     min-width: 260px;
-    height: 100vh;
-    position: sticky;
+    height: 100%;
+    position: relative;
     top: 0;
+    overflow-y: auto;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .dashboard-header-mobile {
@@ -370,10 +375,15 @@ button:hover {
   }
 
   .dashboard-main {
+    flex: 1;
     padding: 2rem;
+    height: 100%;
+    overflow-y: auto;
+    background-color: var(--bg-page);
   }
 
   .dashboard-content-card {
     padding: 2.5rem;
+    min-height: auto;
   }
 }

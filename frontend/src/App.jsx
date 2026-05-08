@@ -11,6 +11,7 @@ import DashboardLayout from './pages/dashboard/DashboardLayout';
 import Inscripciones from './pages/dashboard/Inscripciones';
 import IAPredictiva from './pages/dashboard/IAPredictiva';
 import GestorProgramas from './pages/dashboard/GestorProgramas';
+import GestorBeneficios from './pages/dashboard/GestorBeneficios';
 import Mailing from './pages/dashboard/Mailing';
 import Seguridad from './pages/dashboard/Seguridad';
 import Preferencias from './pages/dashboard/Preferencias';
@@ -54,6 +55,7 @@ function App() {
               </PrivateRoute>
             }>
               <Route index element={<GestorProgramas />} />
+              <Route path="beneficios" element={<GestorBeneficios />} />
               <Route path="inscripciones" element={<Inscripciones />} />
               <Route path="ia-predictiva" element={<IAPredictiva />} />
               <Route path="mailing" element={<Mailing />} />

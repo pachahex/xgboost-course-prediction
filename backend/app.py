@@ -720,6 +720,36 @@ def get_catalogos():
         "grados_academicos": grados_academicos
     })
 
+@app.route('/api/admin/beneficios', methods=['POST'])
+@admin_required
+def create_beneficio():
+    """Crea un nuevo beneficio en el catálogo"""
+    data = request.json
+    nombre = data.get('nombre')
+    
+    if not nombre:
+        return jsonify({"error": "El nombre del beneficio es requerido."}), 400
+        
+    with get_db_connection() as conn:
+        with conn.begin():
+            try:
+                conn.execute(text("INSERT INTO beneficios (nombre) VALUES (:n)"), {"n": nombre})
+                return jsonify({"message": "Beneficio creado con éxito."}), 201
+            except Exception as e:
+                return jsonify({"error": "El beneficio ya existe o hubo un error en la base de datos."}), 400
+
+@app.route('/api/admin/beneficios/<int:beneficio_id>', methods=['DELETE'])
+@admin_required
+def delete_beneficio(beneficio_id):
+    """Elimina físicamente un beneficio del catálogo (Cascada automática en programa_beneficios)"""
+    with get_db_connection() as conn:
+        with conn.begin():
+            res = conn.execute(text("DELETE FROM beneficios WHERE id = :bid RETURNING id"), {"bid": beneficio_id}).fetchone()
+            if not res:
+                return jsonify({"error": "Beneficio no encontrado."}), 404
+                
+    return jsonify({"message": "Beneficio eliminado con éxito."}), 200
+
 
 @app.route('/api/admin/predicciones', methods=['GET'])
 @admin_required

@@ -169,3 +169,28 @@ Cuando te registras, recibes un token JWT en tu correo. Para probar el endpoint 
 *   **Comportamiento Esperado:** `200 OK` con el mensaje "Contraseña actualizada correctamente".
 
 ---
+
+## 8. Gestión de Catálogos: Beneficios (Requiere ser Admin)
+
+Estos endpoints permiten gestionar el catálogo de beneficios que se ofrecen en los programas.
+
+### PASO 8A: Crear un Nuevo Beneficio
+*   **Método:** `POST`
+*   **URL:** `http://localhost:5000/api/admin/beneficios`
+*   **Headers:** Incluir la cookie `access_token` de Admin.
+*   **Body (raw JSON):**
+    ```json
+    {
+      "nombre": "Acceso a Biblioteca Virtual Premium"
+    }
+    ```
+*   **Comportamiento Esperado:** Recibirás un `201 Created` con el mensaje *"Beneficio creado con éxito."*. El nuevo beneficio aparecerá automáticamente en el catálogo para ser asignado a programas.
+
+### PASO 8B: Eliminar un Beneficio
+*   **Método:** `DELETE`
+*   **URL:** `http://localhost:5000/api/admin/beneficios/ID_DEL_BENEFICIO`
+*   **Headers:** Incluir la cookie `access_token` de Admin.
+*   **(Nota:** Reemplaza `ID_DEL_BENEFICIO` por el ID numérico del beneficio que deseas borrar).
+*   **Comportamiento Esperado:** Recibirás un `200 OK` con el mensaje *"Beneficio eliminado del catálogo (borrado lógico)."*. Gracias a la integridad referencial y lógica de la base de datos, este beneficio dejará de aparecer en los formularios pero sus datos históricos permanecerán en la tabla `beneficios` marcados como `eliminado = true`.
+
+---
