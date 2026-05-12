@@ -220,6 +220,26 @@ CREATE TABLE predicciones (
 );
 
 -- ==============================================================================
+-- 6. Fundamento: Observabilidad y Diagnóstico Técnico
+-- Almacena eventos del sistema, errores y telemetría para auditoría por el desarrollador.
+-- ==============================================================================
+
+CREATE TABLE telemetria_eventos (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    usuario_id INT,
+    nivel_severidad VARCHAR(20) NOT NULL, -- 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+    evento VARCHAR(100) NOT NULL,
+    detalles JSONB,
+    endpoint VARCHAR(255),
+    metodo VARCHAR(10),
+    status_code INT,
+    ip_origen VARCHAR(45),
+    user_agent TEXT,
+    fecha_evento TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_telemetria_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+-- ==============================================================================
 -- ÍNDICES[cite: 4]
 -- Fundamento: Optimización de Complejidad Temporal[cite: 4].
 -- Se crean índices en las columnas utilizadas frecuentemente en cláusulas WHERE o JOINs[cite: 4].
@@ -230,13 +250,15 @@ CREATE INDEX idx_inscripciones_programa_id ON inscripciones(programa_id);
 CREATE INDEX idx_inscripciones_fecha ON inscripciones(fecha_inscripcion);
 CREATE INDEX idx_caracteristicas_demanda_programa_tiempo ON caracteristicas_demanda_semanal(programa_id, anio, semana_del_anio);
 CREATE INDEX idx_predicciones_programa_tiempo ON predicciones(programa_id, anio_objetivo, semana_objetivo);
+CREATE INDEX idx_telemetria_fecha ON telemetria_eventos(fecha_evento);
+CREATE INDEX idx_telemetria_severidad ON telemetria_eventos(nivel_severidad);
 
 -- ==============================================================================
 -- DATOS CATÁLOGO BASE (Bootstrap)
 -- ==============================================================================
 
 INSERT INTO roles (nombre) VALUES 
-('Administrador'), ('Estudiante'), ('Facilitador'), ('Suscriptor') 
+('Administrador'), ('Estudiante'), ('Facilitador'), ('Suscriptor'), ('Desarrollador') 
 ON CONFLICT DO NOTHING;
 
 INSERT INTO departamentos (nombre) VALUES 

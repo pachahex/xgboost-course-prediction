@@ -194,3 +194,51 @@ Estos endpoints permiten gestionar el catálogo de beneficios que se ofrecen en 
 *   **Comportamiento Esperado:** Recibirás un `200 OK` con el mensaje *"Beneficio eliminado del catálogo (borrado lógico)."*. Gracias a la integridad referencial y lógica de la base de datos, este beneficio dejará de aparecer en los formularios pero sus datos históricos permanecerán en la tabla `beneficios` marcados como `eliminado = true`.
 
 ---
+
+## 9. Gestión de Facilitadores (Requiere ser Admin)
+
+### PASO 9A: Listar Facilitadores
+*   **Método:** `GET`
+*   **URL:** `http://localhost:5000/api/admin/facilitadores`
+*   **Comportamiento Esperado:** Lista JSON de usuarios con rol "Facilitador".
+
+### PASO 9B: Registrar Facilitador
+*   **Método:** `POST`
+*   **URL:** `http://localhost:5000/api/admin/facilitadores`
+*   **Body (raw JSON):**
+    ```json
+    {
+      "nombre_completo": "Víctor Facilitador",
+      "correo": "vhico765@gmail.com",
+      "password": "admin123"
+    }
+    ```
+*   **Comportamiento Esperado:** `201 Created`.
+
+---
+
+## 10. Gestión de Inscripciones Manuales (Requiere ser Admin)
+
+### PASO 10A: Listar Estudiantes (Para el Select)
+*   **Método:** `GET`
+*   **URL:** `http://localhost:5000/api/admin/estudiantes`
+*   **Comportamiento Esperado:** Lista de usuarios con rol "Estudiante".
+
+### PASO 10B: Crear Nueva Inscripción
+*   **Método:** `POST`
+*   **URL:** `http://localhost:5000/api/admin/inscripciones`
+*   **Body (raw JSON):**
+    ```json
+    {
+      "usuario_id": 5, 
+      "programa_id": 1,
+      "estado_id": 1,
+      "origen_id": 2,
+      "costo_pagado": 1500.00,
+      "fecha_inscripcion": "2026-05-08"
+    }
+    ```
+    *(Nota: Asegúrate de usar IDs válidos de tu base de datos).*
+*   **Comportamiento Esperado:** `201 Created`.
+
+---

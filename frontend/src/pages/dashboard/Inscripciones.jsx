@@ -59,9 +59,10 @@ const Inscripciones = () => {
                 <tr>
                   <th style={thStyle}>ID</th>
                   <th style={thStyle}>Fecha</th>
-                  <th style={thStyle}>Programa</th>
+                  <th style={thStyle}>Estudiante (Edad)</th>
                   <th style={thStyle}>Depto</th>
-                  <th style={thStyle}>Edad</th>
+                  <th style={thStyle}>Programa</th>
+                  <th style={thStyle}>Origen</th>
                   <th style={thStyle}>Costo</th>
                   <th style={thStyle}>Estado</th>
                 </tr>
@@ -70,10 +71,16 @@ const Inscripciones = () => {
                 {data.map(item => (
                   <tr key={item.id} style={{ transition: 'background-color 0.2s' }}>
                     <td style={tdStyle}>#{item.id}</td>
-                    <td style={tdStyle}>{item.fecha}</td>
-                    <td style={tdStyle}><strong>{item.programa}</strong></td>
+                    <td style={tdStyle}>{new Date(item.fecha).toLocaleDateString()}</td>
+                    <td style={tdStyle}>
+                      <div style={{fontWeight: 'bold'}}>Usuario #{item.usuario_id || 'N/A'}</div>
+                      <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>{item.edad} años</div>
+                    </td>
                     <td style={tdStyle}>{item.departamento}</td>
-                    <td style={tdStyle}>{item.edad}</td>
+                    <td style={tdStyle}><strong>{item.programa}</strong></td>
+                    <td style={tdStyle}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.origen}</span>
+                    </td>
                     <td style={tdStyle}><span style={{color: 'var(--color-accent)', fontWeight: 'bold'}}>{item.costo} Bs.</span></td>
                     <td style={tdStyle}>
                       <span style={{ 

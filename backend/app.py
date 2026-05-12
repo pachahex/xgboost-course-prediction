@@ -12,7 +12,9 @@ import pyotp
 import qrcode
 import base64
 from io import BytesIO
+import json
 from utils.email import mail, send_verification_email, send_reset_password_email, send_mass_mailing
+from utils.telemetry import init_telemetry, log_event
 
 app = Flask(__name__)
 # Configuracion de Archivos
@@ -35,6 +37,7 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@autopoiesis.com')
 
 mail.init_app(app)
+init_telemetry(app)
 
 def admin_required(f):
     """Decorador para proteger rutas requiriendo el rol de Administrador usando JWT en Cookies HTTP-Only"""
@@ -49,6 +52,28 @@ def admin_required(f):
                 return jsonify({"error": "No tienes privilegios de Administrador."}), 403
             
             # Pasar info del usuario a la función
+            request.user_info = decoded
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token expirado. Inicia sesión nuevamente."}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Token inválido."}), 401
+            
+        return f(*args, **kwargs)
+    wrap.__name__ = f.__name__
+    return wrap
+
+def dev_required(f):
+    """Decorador para proteger rutas requiriendo el rol de Desarrollador"""
+    def wrap(*args, **kwargs):
+        token = request.cookies.get('access_token')
+        if not token:
+            return jsonify({"error": "No token provisto. Acceso denegado."}), 401
+            
+        try:
+            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            if decoded.get('rol') != 'Desarrollador':
+                return jsonify({"error": "No tienes privilegios de Desarrollador."}), 403
+            
             request.user_info = decoded
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token expirado. Inicia sesión nuevamente."}), 401
@@ -510,7 +535,7 @@ def get_inscripciones():
         total = conn.execute(text("SELECT COUNT(*) FROM inscripciones")).scalar()
         
         query = text("""
-            SELECT i.id, p.nombre as programa, d.nombre as departamento, e.nombre as estado, 
+            SELECT i.id, i.usuario_id, p.nombre as programa, d.nombre as departamento, e.nombre as estado, 
                    o.nombre as origen,
                    i.fecha_inscripcion, 
                    EXTRACT(YEAR FROM age(i.fecha_inscripcion, u.fecha_nacimiento))::INT as edad_estudiante,
@@ -531,6 +556,7 @@ def get_inscripciones():
         for r in result:
             inscripciones.append({
                 "id": r.id,
+                "usuario_id": r.usuario_id,
                 "programa": r.programa,
                 "departamento": r.departamento,
                 "estado": r.estado,
@@ -712,12 +738,19 @@ def get_catalogos():
         modalidades = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM modalidades")).fetchall()]
         beneficios = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM beneficios")).fetchall()]
         grados_academicos = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM grados_academicos")).fetchall()]
+        departamentos = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM departamentos")).fetchall()]
+        estados_inscripcion = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM estados_inscripcion")).fetchall()]
+        origenes = [{"id": r.id, "nombre": r.nombre} for r in conn.execute(text("SELECT id, nombre FROM origenes_captacion")).fetchall()]
+
     return jsonify({
         "categorias": categorias, 
         "tipos_servicio": tipos,
         "modalidades": modalidades,
         "beneficios": beneficios,
-        "grados_academicos": grados_academicos
+        "grados_academicos": grados_academicos,
+        "departamentos": departamentos,
+        "estados_inscripcion": estados_inscripcion,
+        "origenes": origenes
     })
 
 @app.route('/api/admin/beneficios', methods=['POST'])
@@ -737,6 +770,96 @@ def create_beneficio():
                 return jsonify({"message": "Beneficio creado con éxito."}), 201
             except Exception as e:
                 return jsonify({"error": "El beneficio ya existe o hubo un error en la base de datos."}), 400
+
+@app.route('/api/admin/facilitadores', methods=['GET'])
+@admin_required
+def get_facilitadores():
+    """Lista todos los usuarios con rol Facilitador"""
+    with get_db_connection() as conn:
+        result = conn.execute(text("""
+            SELECT u.id, u.nombre_completo, u.correo, u.fecha_creacion
+            FROM usuarios u
+            JOIN roles r ON u.rol_id = r.id
+            WHERE r.nombre = 'Facilitador'
+            ORDER BY u.nombre_completo
+        """)).fetchall()
+        facilitadores = [{"id": r.id, "nombre": r.nombre_completo, "correo": r.correo, "creado": str(r.fecha_creacion)} for r in result]
+    return jsonify(facilitadores)
+
+@app.route('/api/admin/facilitadores', methods=['POST'])
+@admin_required
+def create_facilitador():
+    """Registra un nuevo facilitador desde el panel de admin"""
+    data = request.json
+    nombre = data.get('nombre_completo')
+    correo = data.get('correo')
+    password = data.get('password', 'facilitador123') # Password por defecto si no se provee
+    
+    if not nombre or not correo:
+        return jsonify({"error": "Nombre y correo son obligatorios."}), 400
+        
+    with get_db_connection() as conn:
+        with conn.begin():
+            rol_id = conn.execute(text("SELECT id FROM roles WHERE nombre = 'Facilitador'")).scalar()
+            exists = conn.execute(text("SELECT id FROM usuarios WHERE correo = :correo"), {"correo": correo}).scalar()
+            if exists:
+                return jsonify({"error": "El correo ya está registrado."}), 400
+                
+            hash_pwd = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            conn.execute(text("""
+                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena, email_verificado)
+                VALUES (:rid, :nombre, :correo, :pwd, true)
+            """), {"rid": rol_id, "nombre": nombre, "correo": correo, "pwd": hash_pwd})
+            
+    return jsonify({"message": "Facilitador registrado con éxito."}), 201
+
+@app.route('/api/admin/estudiantes', methods=['GET'])
+@admin_required
+def get_estudiantes():
+    """Lista todos los usuarios con rol Estudiante"""
+    with get_db_connection() as conn:
+        result = conn.execute(text("""
+            SELECT u.id, u.nombre_completo, u.correo, d.nombre as departamento
+            FROM usuarios u
+            JOIN roles r ON u.rol_id = r.id
+            LEFT JOIN departamentos d ON u.departamento_id = d.id
+            WHERE r.nombre = 'Estudiante'
+            ORDER BY u.nombre_completo
+        """)).fetchall()
+        estudiantes = [{"id": r.id, "nombre": r.nombre_completo, "correo": r.correo, "departamento": r.departamento} for r in result]
+    return jsonify(estudiantes)
+
+@app.route('/api/admin/inscripciones', methods=['POST'])
+@admin_required
+def create_inscripcion():
+    """Crea una nueva inscripción manual"""
+    data = request.json
+    usuario_id = data.get('usuario_id')
+    programa_id = data.get('programa_id')
+    estado_id = data.get('estado_id')
+    origen_id = data.get('origen_id')
+    costo = data.get('costo_pagado')
+    fecha = data.get('fecha_inscripcion', datetime.date.today().isoformat())
+    
+    if not all([usuario_id, programa_id, estado_id, origen_id, costo]):
+        return jsonify({"error": "Faltan datos para la inscripción."}), 400
+        
+    with get_db_connection() as conn:
+        with conn.begin():
+            # Verificar si ya existe esa inscripción para evitar duplicados accidentales
+            exists = conn.execute(text("SELECT id FROM inscripciones WHERE usuario_id = :uid AND programa_id = :pid"), 
+                                 {"uid": usuario_id, "pid": programa_id}).scalar()
+            if exists:
+                return jsonify({"error": "El estudiante ya está inscrito en este programa."}), 400
+
+            conn.execute(text("""
+                INSERT INTO inscripciones (usuario_id, programa_id, estado_id, origen_id, fecha_inscripcion, costo_pagado)
+                VALUES (:uid, :pid, :eid, :oid, :f, :c)
+            """), {
+                "uid": usuario_id, "pid": programa_id, "eid": estado_id, "oid": origen_id, "f": fecha, "c": costo
+            })
+            
+    return jsonify({"message": "Inscripción realizada con éxito."}), 201
 
 @app.route('/api/admin/beneficios/<int:beneficio_id>', methods=['DELETE'])
 @admin_required
@@ -934,6 +1057,52 @@ def send_mailing():
         "message": "Campaña enviada exitosamente a la cola de envío.",
         "destinatarios": total_enviados
     })
+
+# ==========================================
+# RUTAS DE DESARROLLADOR (TELEMETRÍA)
+# ==========================================
+
+@app.route('/api/dev/telemetria', methods=['GET'])
+@dev_required
+def get_telemetria():
+    """Retorna los logs de telemetría técnica para el Panel de Desarrollador"""
+    nivel = request.args.get('nivel')
+    limit = int(request.args.get('limit', 100))
+    
+    with get_db_connection() as conn:
+        query_str = "SELECT * FROM telemetria_eventos"
+        params = {"limit": limit}
+        
+        if nivel:
+            query_str += " WHERE nivel_severidad = :lvl"
+            params["lvl"] = nivel
+            
+        query_str += " ORDER BY fecha_evento DESC LIMIT :limit"
+        
+        result = conn.execute(text(query_str), params).fetchall()
+        
+        logs = []
+        for r in result:
+            logs.append({
+                "id": r.id,
+                "nivel": r.nivel_severidad,
+                "evento": r.evento,
+                "detalles": r.detalles,
+                "endpoint": r.endpoint,
+                "metodo": r.metodo,
+                "status_code": r.status_code,
+                "ip": r.ip_origen,
+                "fecha": r.fecha_evento.isoformat()
+            })
+            
+    return jsonify(logs)
+
+@app.route('/api/dev/log-client-error', methods=['POST'])
+def log_client_error():
+    """Endpoint para que el Frontend reporte errores de carga o JS"""
+    data = request.json
+    log_event('ERROR', 'CLIENT_JS_ERROR', detalles=data)
+    return jsonify({"status": "logged"}), 201
 
 if __name__ == '__main__':
     # Habilitamos Flask para escuchar peticiones de Docker u host externo

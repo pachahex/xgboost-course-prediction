@@ -12,8 +12,11 @@ import Inscripciones from './pages/dashboard/Inscripciones';
 import IAPredictiva from './pages/dashboard/IAPredictiva';
 import GestorProgramas from './pages/dashboard/GestorProgramas';
 import GestorBeneficios from './pages/dashboard/GestorBeneficios';
+import GestorFacilitadores from './pages/dashboard/GestorFacilitadores';
+import NuevaInscripcion from './pages/dashboard/NuevaInscripcion';
 import Mailing from './pages/dashboard/Mailing';
 import Seguridad from './pages/dashboard/Seguridad';
+import Telemetria from './pages/dashboard/Telemetria';
 import Preferencias from './pages/dashboard/Preferencias';
 import VerificarEmail from './pages/VerificarEmail';
 import ResetPassword from './pages/ResetPassword';
@@ -56,10 +59,13 @@ function App() {
             }>
               <Route index element={<GestorProgramas />} />
               <Route path="beneficios" element={<GestorBeneficios />} />
+              <Route path="facilitadores" element={<GestorFacilitadores />} />
               <Route path="inscripciones" element={<Inscripciones />} />
+              <Route path="inscripciones/nueva" element={<NuevaInscripcion />} />
               <Route path="ia-predictiva" element={<IAPredictiva />} />
               <Route path="mailing" element={<Mailing />} />
               <Route path="seguridad" element={<Seguridad />} />
+              <Route path="telemetria" element={<Telemetria />} />
               <Route path="preferencias" element={<Preferencias />} />
             </Route>
             

@@ -109,4 +109,70 @@ El módulo integra una sección de **Estrategia** que vincula el correo electró
 4.  **Usuario** recibe el correo y se inscribe, generando un dato de "Venta Real" que cerrará el círculo de entrenamiento para la IA.
 
 ---
-*Próximo módulo a documentar: Inscripciones y Seguimiento de Ventas.*
+## 4. Módulo: Diagnóstico y Telemetría Técnica (Developer Mode)
+**Ubicación:** `frontend/src/pages/dashboard/Telemetria.jsx` | `backend/app.py` (Hooks de telemetría)
+
+Este módulo es la **infraestructura de observabilidad** del sistema. Permite al desarrollador monitorear la salud técnica de la plataforma, detectar errores en tiempo real y asegurar que el flujo de datos hacia la IA sea íntegro y sin fallos ocultos.
+
+### 📊 Relación con XGBoost (Monitoreo de Calidad e Inferencia)
+
+La telemetría es el "escudo" que protege la calidad del pipeline de datos que alimenta al modelo:
+
+| Funcionalidad | Propósito Técnico | Beneficio para la IA |
+| :--- | :--- | :--- |
+| **Log de Errores (404/500)** | Detecta fallos en la recolección de datos. | Evita que el modelo aprenda de periodos con "datos perdidos" debido a caídas del sistema. |
+| **Telemetría de Endpoints** | Mide tiempos de respuesta. | Monitorea la latencia de la inferencia de XGBoost, asegurando que la IA responda en menos de 200ms. |
+| **Audit Log de Usuarios** | Registra acciones significativas. | Permite trazar el "camino del usuario" (User Journey) para entender por qué ciertos perfiles convierten más que otros. |
+| **Overlay de Diagnóstico** | Identifica componentes FE/BE. | Facilita la corrección inmediata de errores en el pipeline de ingeniería de características. |
+
+### 💡 Explicabilidad y Depuración (SHAP Support)
+
+El modo desarrollador facilita la depuración de la "caja negra" de la IA:
+
+- **Detección de Data Drift**: Al loguear las entradas de los usuarios, el desarrollador puede detectar si los datos del mundo real se están alejando de los datos de entrenamiento (Drift), lo que indica que el modelo XGBoost necesita un re-entrenamiento urgente.
+- **Auditoría de Inferencia**: Si una predicción de SHAP parece incoherente, el desarrollador puede consultar los logs de telemetría para ver exactamente qué parámetros se le pasaron al modelo en ese milisegundo exacto.
+
+### 🛠️ Flujo de Diagnóstico
+1.  **Backend** captura automáticamente cada error HTTP y lo persiste en la tabla `telemetria_eventos` con detalles del contexto (IP, User Agent, Endpoint).
+2.  **Desarrollador** activa el "Modo Dev" desde el Dashboard para visualizar la estructura del código mientras navega (Overlays).
+3.  **Sistema** reporta errores de JS en el navegador al backend para que el desarrollador sepa si un usuario tuvo un fallo visual sin necesidad de reportarlo manualmente.
+4.  **Panel de Telemetría** visualiza en tiempo real el flujo de eventos, permitiendo filtrar por criticidad (ERROR, CRITICAL, WARNING).
+
+---
+## 5. Módulo: Gestión de Facilitadores y Personal Docente
+**Ubicación:** `frontend/src/pages/dashboard/GestorFacilitadores.jsx`
+
+Este módulo gestiona el capital humano de la academia. Los facilitadores son una **variable de influencia indirecta** en la demanda; el prestigio o la especialidad de un docente puede ser un factor determinante para el éxito de un programa.
+
+### 📊 Relación con XGBoost (Atributos de Calidad)
+| Dato de Facilitador | Valor para el Modelo Predictivo |
+| :--- | :--- |
+| **Especialidad/Perfil** | Identifica si programas liderados por perfiles técnicos tienen más demanda que los de perfiles teóricos. |
+| **Carga Académica** | Permite predecir el agotamiento de recursos o la necesidad de contratar más personal ante picos de demanda predicha. |
+
+---
+
+## 6. Módulo: Inscripciones y Seguimiento de Ventas (Conversión)
+**Ubicación:** `frontend/src/pages/dashboard/Inscripciones.jsx` | `NuevaInscripcion.jsx`
+
+Este es el módulo de **etiquetado (Labeling)**. Aquí es donde se registran las conversiones reales que el modelo XGBoost intenta predecir.
+
+### 📊 Relación con XGBoost (Variable Objetivo / Target)
+| Funcionalidad | Propósito en el pipeline de ML |
+| :--- | :--- |
+| **Nuevo Ingreso** | Genera el punto de dato más reciente para el entrenamiento. Permite capturar la demanda en tiempo real. |
+| **Origen de Captación** | Variable crucial (Facebook, Boletín, Recomendación). Permite a la IA entender qué canal es más eficiente por tipo de programa. |
+| **Estado de Inscripción** | Permite filtrar solo las ventas "Completadas" para entrenar el modelo, descartando leads fríos o cancelados que distorsionarían la predicción de ingresos. |
+| **Costo Pagado** | Valida si el precio oficial del programa se mantuvo o si hubo descuentos, midiendo la sensibilidad real del mercado. |
+
+### 💡 Explicabilidad con SHAP
+- **Peso del Origen:** SHAP puede mostrar que el origen "Facebook" es el principal motor de demanda para Cursos Cortos, mientras que el "Boletín" funciona mejor para Diplomados Senior.
+- **Análisis de Conversión:** Si las inscripciones son bajas, SHAP puede revelar si el factor limitante es el canal de captación o el precio pagado.
+
+### 🛠️ Flujo de Conversión
+1. **Admin/Vendedor** utiliza `NuevaInscripcion.jsx` para registrar un estudiante (nuevo o existente).
+2. Los datos se guardan en la tabla `inscripciones`, vinculando usuario, programa y metadatos de venta.
+3. El historial se visualiza en el **Registro Histórico** para auditoría.
+4. El proceso de Re-entrenamiento toma estos datos para ajustar el modelo XGBoost, mejorando la precisión de la demanda proyectada para el siguiente ciclo.
+
+---

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap, Settings, Menu, X, LogOut, ArrowLeft, List } from 'lucide-react';
+import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap, Settings, Menu, X, LogOut, ArrowLeft, List, Users, UserCheck, UserPlus, Terminal, Activity, Eye, EyeOff } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 
 const DashboardLayout = () => {
@@ -8,7 +8,23 @@ const DashboardLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [isProgramasOpen, setIsProgramasOpen] = useState(true); // Abierto por defecto
+  const [isProgramasOpen, setIsProgramasOpen] = useState(true);
+  const [isInscripcionesOpen, setIsInscripcionesOpen] = useState(false);
+  const [isFacilitadoresOpen, setIsFacilitadoresOpen] = useState(false);
+  const [devMode, setDevMode] = useState(sessionStorage.getItem('devMode') === 'true');
+  const [simulatedRole, setSimulatedRole] = useState(sessionStorage.getItem('simulatedRole') || user.rol);
+
+  const toggleDevMode = () => {
+    const newVal = !devMode;
+    setDevMode(newVal);
+    sessionStorage.setItem('devMode', newVal);
+    if (!newVal) setSimulatedRole(user.rol);
+  };
+
+  const changeSimulatedRole = (role) => {
+    setSimulatedRole(role);
+    sessionStorage.setItem('simulatedRole', role);
+  };
 
   const getLinkStyle = (path) => ({
     display: 'flex',
@@ -24,7 +40,14 @@ const DashboardLayout = () => {
     transition: 'all 0.2s'
   });
 
-  const isAdmin = user.rol === 'Administrador';
+  const isDev = user.rol === 'Desarrollador';
+  const effectiveRole = (isDev && devMode) ? simulatedRole : user.rol;
+  
+  // Flags de vista basados estrictamente en el rol efectivo
+  const isActualAdmin = effectiveRole === 'Administrador';
+  const isActualStudent = effectiveRole === 'Estudiante';
+  const isActualDev = effectiveRole === 'Desarrollador';
+  const isActualFacilitator = effectiveRole === 'Facilitador';
 
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
@@ -40,7 +63,7 @@ const DashboardLayout = () => {
       <header className="dashboard-header-mobile">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <GraduationCap size={24} color="var(--color-accent-light)" />
-          <span style={{ fontWeight: 'bold' }}>Panel {isAdmin ? 'Admin' : 'Estudiante'}</span>
+          <span style={{ fontWeight: 'bold' }}>Panel {effectiveRole}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <ThemeToggle />
@@ -77,12 +100,13 @@ const DashboardLayout = () => {
 
         <div className="desktop-only" style={{ marginBottom: '2rem' }}>
           <div style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.1)', display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'white' }}>
-            {user.rol}
+            {effectiveRole} {devMode && isDev && '(Simulado)'}
           </div>
         </div>
 
         <nav onClick={() => setSidebarOpen(false)}>
-          {isAdmin ? (
+          {/* VISTA DE ADMINISTRADOR */}
+          {isActualAdmin && (
             <>
               <div style={{ marginBottom: '0.5rem' }}>
                 <button
@@ -91,7 +115,7 @@ const DashboardLayout = () => {
                     setIsProgramasOpen(!isProgramasOpen);
                   }}
                   style={{
-                    ...getLinkStyle(location.pathname.startsWith('/dashboard') && !['/dashboard/inscripciones', '/dashboard/ia-predictiva', '/dashboard/mailing'].includes(location.pathname) ? location.pathname : '/dashboard'),
+                    ...getLinkStyle(location.pathname.startsWith('/dashboard') && !['/dashboard/inscripciones', '/dashboard/ia-predictiva', '/dashboard/mailing', '/dashboard/telemetria'].includes(location.pathname) ? location.pathname : '/dashboard'),
                     width: '100%',
                     border: 'none',
                     cursor: 'pointer',
@@ -130,12 +154,59 @@ const DashboardLayout = () => {
                     >
                       <List size={16} /> Catálogo Beneficios
                     </Link>
+                    <Link 
+                      to="/dashboard/facilitadores" 
+                      style={{ 
+                        ...getLinkStyle('/dashboard/facilitadores'), 
+                        padding: '0.7rem 1rem', 
+                        fontSize: '0.9rem',
+                        backgroundColor: location.pathname === '/dashboard/facilitadores' ? 'var(--color-accent)' : 'transparent'
+                      }}
+                    >
+                      <UserCheck size={16} /> Gestión Docente
+                    </Link>
                   </div>
                 )}
               </div>
-              <Link to="/dashboard/inscripciones" style={getLinkStyle('/dashboard/inscripciones')}>
-                <ClipboardList size={18} /> Registro Histórico
-              </Link>
+            </>
+          )}
+
+          {/* VISTA SOLO ADMINISTRADOR (Inscripciones, IA, Mailing) */}
+          {isActualAdmin && (
+            <>
+              {/* Submenú Inscripciones */}
+              <div style={{ marginBottom: '0.5rem' }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsInscripcionesOpen(!isInscripcionesOpen);
+                  }}
+                  style={{
+                    ...getLinkStyle(location.pathname.startsWith('/dashboard/inscripciones') ? location.pathname : ''),
+                    width: '100%',
+                    border: 'none',
+                    cursor: 'pointer',
+                    justifyContent: 'space-between',
+                    backgroundColor: location.pathname.startsWith('/dashboard/inscripciones') ? 'rgba(255,255,255,0.05)' : 'transparent',
+                    color: location.pathname.startsWith('/dashboard/inscripciones') ? 'white' : '#aaa'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                    <ClipboardList size={18} /> Inscripciones
+                  </div>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>{isInscripcionesOpen ? '▲' : '▼'}</span>
+                </button>
+                {isInscripcionesOpen && (
+                  <div style={{ paddingLeft: '1.5rem', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <Link to="/dashboard/inscripciones/nueva" style={{ ...getLinkStyle('/dashboard/inscripciones/nueva'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
+                      <UserPlus size={16} /> Nuevo Ingreso
+                    </Link>
+                    <Link to="/dashboard/inscripciones" style={{ ...getLinkStyle('/dashboard/inscripciones'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
+                      <List size={16} /> Registro Histórico
+                    </Link>
+                  </div>
+                )}
+              </div>
               <Link to="/dashboard/ia-predictiva" style={getLinkStyle('/dashboard/ia-predictiva')}>
                 <Brain size={18} /> IA y Demanda
               </Link>
@@ -143,10 +214,46 @@ const DashboardLayout = () => {
                 <Mail size={18} /> Email Marketing
               </Link>
             </>
-          ) : (
+          )}
+
+          {/* VISTA DE ESTUDIANTE */}
+          {isActualStudent && (
             <Link to="/dashboard" style={getLinkStyle('/dashboard')}>
               <GraduationCap size={18} /> Mis Cursos
             </Link>
+          )}
+
+          {/* VISTA DE DESARROLLADOR (TELEMETRÍA) */}
+          {isActualDev && (
+            <Link to="/dashboard/telemetria" style={getLinkStyle('/dashboard/telemetria')}>
+              <Terminal size={18} /> Telemetría técnica
+            </Link>
+          )}
+
+          {/* CONTROLES GLOBALES DE DESARROLLADOR */}
+          {isDev && (
+            <div style={{ margin: '1rem 0', padding: '0 1rem' }}>
+              <button 
+                onClick={(e) => { e.stopPropagation(); toggleDevMode(); }}
+                style={{
+                  width: '100%',
+                  padding: '0.6rem',
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-accent)',
+                  backgroundColor: devMode ? 'var(--color-accent)' : 'transparent',
+                  color: devMode ? 'white' : 'var(--color-accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem'
+                }}
+              >
+                {devMode ? <EyeOff size={16} /> : <Eye size={16} />}
+                {devMode ? 'Salir Modo Dev' : 'Modo Desarrollador'}
+              </button>
+            </div>
           )}
 
           <div style={{ margin: '1.5rem 0', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
@@ -212,20 +319,101 @@ const DashboardLayout = () => {
         )}
 
         <div className="dashboard-content-card">
-          {isAdmin || location.pathname !== '/dashboard' ? (
+          {(isActualAdmin || location.pathname !== '/dashboard') ? (
             <Outlet />
           ) : (
             <div style={{ textAlign: 'center', padding: '2rem 0' }}>
               <div style={{ backgroundColor: 'rgba(127, 43, 128, 0.05)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
                 <GraduationCap size={40} color="var(--color-primary)" />
               </div>
-              <h2 style={{ color: 'var(--text-main)', marginBottom: '1rem' }}>¡Bienvenido a tu Espacio de Aprendizaje!</h2>
+              <h2 style={{ color: 'var(--text-main)', marginBottom: '1rem' }}>
+                {isActualFacilitator ? '¡Bienvenido, Facilitador!' : (isActualDev ? '¡Bienvenido al Panel de Control!' : '¡Bienvenido a tu Espacio de Aprendizaje!')}
+              </h2>
               <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto' }}>
-                Aquí podrás gestionar tus cursos, certificaciones y preferencias de comunicación. Explora el menú lateral para comenzar.
+                {isActualFacilitator 
+                  ? 'Como facilitador, pronto tendrás acceso a tus grupos asignados y herramientas pedagógicas. Por ahora, puedes gestionar tu perfil y seguridad.'
+                  : isActualDev 
+                    ? 'Como desarrollador, tienes acceso a la telemetría y diagnóstico del sistema. Activa el Modo Desarrollador para simular otros roles.'
+                    : 'Aquí podrás gestionar tus cursos, certificaciones y preferencias de comunicación. Explora el menú lateral para comenzar.'}
               </p>
+              
+              {isActualDev && (
+                <div style={{ marginTop: '2rem' }}>
+                  <Link 
+                    to="/dashboard/telemetria" 
+                    style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      backgroundColor: 'var(--color-primary)', 
+                      color: 'white', 
+                      padding: '0.8rem 1.5rem', 
+                      borderRadius: '8px', 
+                      textDecoration: 'none',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    <Terminal size={18} /> Ir a Telemetría Técnica
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>
+
+        {/* Overlay de Diagnóstico (Modo Desarrollador) */}
+        {devMode && isDev && (
+          <div style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: '#1e272e',
+            color: '#2ecc71',
+            padding: '15px',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
+            fontFamily: 'monospace',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+            zIndex: 9999,
+            border: '1px solid rgba(46, 204, 113, 0.3)',
+            minWidth: '200px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '5px' }}>
+              <span style={{ fontWeight: 'bold' }}>🛠 DIAGNÓSTICO</span>
+              <button 
+                onClick={toggleDevMode}
+                style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer', fontSize: '0.7rem' }}
+              >
+                [Cerrar]
+              </button>
+            </div>
+            
+            <div style={{ marginBottom: '10px' }}>
+              <label style={{ display: 'block', color: '#bdc3c7', marginBottom: '5px', fontSize: '0.7rem' }}>SIMULAR ROL:</label>
+              <select 
+                value={simulatedRole} 
+                onChange={(e) => changeSimulatedRole(e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  backgroundColor: '#2f3640', 
+                  color: 'white', 
+                  border: '1px solid #7f8c8d', 
+                  borderRadius: '4px',
+                  padding: '2px',
+                  fontSize: '0.75rem'
+                }}
+              >
+                <option value="Desarrollador">Desarrollador</option>
+                <option value="Administrador">Administrador</option>
+                <option value="Estudiante">Estudiante</option>
+                <option value="Facilitador">Facilitador</option>
+              </select>
+            </div>
+
+            <div style={{ color: '#ecf0f1', marginBottom: '3px' }}>PATH: {location.pathname}</div>
+            <div style={{ color: '#ecf0f1' }}>VIEW: {location.pathname === '/dashboard' ? 'Index (Gestor)' : location.pathname.split('/').pop()}</div>
+          </div>
+        )}
       </main>
     </div>
   );

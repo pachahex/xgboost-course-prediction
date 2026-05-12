@@ -231,17 +231,21 @@ const Registro = () => {
           {success && <div style={{ backgroundColor: 'rgba(46, 204, 113, 0.1)', color: '#2ecc71', padding: '0.8rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', border: '1px solid rgba(46, 204, 113, 0.2)' }}>{success}</div>}
 
           <form onSubmit={handleRegistro}>
-            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 600 ? '1fr' : '1fr 1fr', gap: '1rem' }}>
-              <div style={inputGroupStyle}>
-                <User size={18} style={iconStyle} />
-                <input type="text" name="nombre_completo" placeholder="Nombre completo" value={formData.nombre_completo} onChange={handleChange} required style={modernInputStyle} />
-                <small style={{ display: 'block', marginTop: '0.4rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                  * Importante usar datos reales para futuras certificaciones.
+            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 600 ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ position: 'relative' }}>
+                  <User size={18} style={iconStyle} />
+                  <input type="text" name="nombre_completo" placeholder="Nombre completo" value={formData.nombre_completo} onChange={handleChange} required style={modernInputStyle} />
+                </div>
+                <small style={{ display: 'block', marginTop: '0.4rem', color: 'var(--text-muted)', fontSize: '0.72rem', lineHeight: '1.2' }}>
+                  * Usa tu nombre real para los certificados.
                 </small>
               </div>
-              <div style={inputGroupStyle}>
-                <Mail size={18} style={iconStyle} />
-                <input type="email" name="correo" placeholder="Correo electrónico" value={formData.correo} onChange={handleChange} required style={modernInputStyle} />
+              <div>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={18} style={iconStyle} />
+                  <input type="email" name="correo" placeholder="Correo electrónico" value={formData.correo} onChange={handleChange} required style={modernInputStyle} />
+                </div>
               </div>
             </div>
 

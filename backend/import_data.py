@@ -28,10 +28,17 @@ def run_import():
             # FASE 1: SEED (Datos Estructurales Complejos)
             # ==============================================================================
             
-            # 1. Recuperar Roles Base (Ya insertados por 01_schema.sql)
+            # 1. Asegurar que los roles existan (especialmente el nuevo de Desarrollador)
+            conn.execute(text("""
+                INSERT INTO roles (nombre) VALUES 
+                ('Administrador'), ('Estudiante'), ('Facilitador'), ('Suscriptor'), ('Desarrollador') 
+                ON CONFLICT (nombre) DO NOTHING
+            """))
+
+            # 2. Recuperar Roles Base
             role_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM roles"))}
             
-            # 2. Inserción de Usuario Administrador Principal
+            # 3. Inserción de Usuario Administrador Principal
             print("Insertando Usuario Administrador...")
             admin_pwd = hash_password("admin123")
             admin_email = 'juandiegomc.sis@gmail.com'
@@ -41,8 +48,28 @@ def run_import():
                 ON CONFLICT (correo) DO NOTHING
             """), {"rid": role_map['Administrador'], "correo": admin_email, "pwd": admin_pwd})
 
+            # 4. Inserción de Usuario Desarrollador (Nueva Fase 6)
+            print("Insertando Usuario Desarrollador...")
+            dev_pwd = hash_password("admin123")
+            dev_email = 'admin@autopoiesis.com'
+            conn.execute(text("""
+                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena, email_verificado) 
+                VALUES (:rid, 'Desarrollador del Sistema', :correo, :pwd, true)
+                ON CONFLICT (correo) DO NOTHING
+            """), {"rid": role_map['Desarrollador'], "correo": dev_email, "pwd": dev_pwd})
+
+            # 4b. Inserción de Facilitador de Prueba
+            print("Insertando Facilitador de Prueba...")
+            fac_pwd = hash_password("admin123")
+            fac_email = 'vhico765@gmail.com'
+            conn.execute(text("""
+                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena, email_verificado) 
+                VALUES (:rid, 'Víctor Facilitador', :correo, :pwd, true)
+                ON CONFLICT (correo) DO NOTHING
+            """), {"rid": role_map['Facilitador'], "correo": fac_email, "pwd": fac_pwd})
+
             
-            # 3. Mapeos de Catálogos para Programas
+            # 5. Mapeos de Catálogos para Programas
             print("Recuperando Catálogos (Categorías y Tipos de Servicio)...")
             cat_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM categorias"))}
             ts_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM tipos_servicio"))}
