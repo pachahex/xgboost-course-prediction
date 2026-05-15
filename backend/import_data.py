@@ -28,10 +28,10 @@ def run_import():
             # FASE 1: SEED (Datos Estructurales Complejos)
             # ==============================================================================
             
-            # 1. Asegurar que los roles existan (especialmente el nuevo de Desarrollador)
+            # 1. Asegurar que los roles existan
             conn.execute(text("""
                 INSERT INTO roles (nombre) VALUES 
-                ('Administrador'), ('Estudiante'), ('Facilitador'), ('Suscriptor'), ('Desarrollador') 
+                ('Administrador'), ('Estudiante'), ('Facilitador'), ('Suscriptor') 
                 ON CONFLICT (nombre) DO NOTHING
             """))
 
@@ -48,15 +48,6 @@ def run_import():
                 ON CONFLICT (correo) DO NOTHING
             """), {"rid": role_map['Administrador'], "correo": admin_email, "pwd": admin_pwd})
 
-            # 4. Inserción de Usuario Desarrollador (Nueva Fase 6)
-            print("Insertando Usuario Desarrollador...")
-            dev_pwd = hash_password("admin123")
-            dev_email = 'admin@autopoiesis.com'
-            conn.execute(text("""
-                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena, email_verificado) 
-                VALUES (:rid, 'Desarrollador del Sistema', :correo, :pwd, true)
-                ON CONFLICT (correo) DO NOTHING
-            """), {"rid": role_map['Desarrollador'], "correo": dev_email, "pwd": dev_pwd})
 
             # 4b. Inserción de Facilitador de Prueba
             print("Insertando Facilitador de Prueba...")

@@ -286,34 +286,43 @@ const Registro = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 600 ? '1fr' : '1fr 1fr', gap: '1rem' }}>
-              <div style={inputGroupStyle}>
-                <Calendar size={18} style={iconStyle} />
-                <input type="date" name="fecha_nacimiento" value={formData.fecha_nacimiento} onChange={handleChange} required style={modernInputStyle} />
+            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 600 ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', marginLeft: '0.4rem', fontWeight: '500' }}>Fecha de nacimiento</label>
+                <div style={{ position: 'relative' }}>
+                  <Calendar size={18} style={iconStyle} />
+                  <input type="date" name="fecha_nacimiento" value={formData.fecha_nacimiento} onChange={handleChange} required style={modernInputStyle} />
+                </div>
               </div>
-              <div style={inputGroupStyle}>
-                <MapPin size={18} style={iconStyle} />
-                <select name="departamento_id" value={formData.departamento_id} onChange={handleChange} required style={modernInputStyle}>
-                  <option value="">Departamento...</option>
-                  {departamentos.map(dep => <option key={dep.id} value={dep.id}>{dep.nombre}</option>)}
-                </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', marginLeft: '0.4rem', fontWeight: '500' }}>Residencia / Departamento</label>
+                <div style={{ position: 'relative' }}>
+                  <MapPin size={18} style={iconStyle} />
+                  <select name="departamento_id" value={formData.departamento_id} onChange={handleChange} required style={modernInputStyle}>
+                    <option value="">Selecciona departamento...</option>
+                    {departamentos.map(dep => <option key={dep.id} value={dep.id}>{dep.nombre}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div style={inputGroupStyle}>
-              <Briefcase size={18} style={iconStyle} />
-              <select 
-                name="grado_academico_id" 
-                value={formData.grado_academico_id} 
-                onChange={handleChange} 
-                required 
-                style={modernInputStyle}
-              >
-                <option value="">Nivel académico / Ocupación...</option>
-                {gradosAcademicos.map(grado => (
-                  <option key={grado.id} value={grado.id}>{grado.nombre}</option>
-                ))}
-              </select>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', marginLeft: '0.4rem', fontWeight: '500' }}>Nivel académico u Ocupación actual</label>
+              <div style={{ position: 'relative' }}>
+                <Briefcase size={18} style={iconStyle} />
+                <select 
+                  name="grado_academico_id" 
+                  value={formData.grado_academico_id} 
+                  onChange={handleChange} 
+                  required 
+                  style={modernInputStyle}
+                >
+                  <option value="">Selecciona tu grado u ocupación...</option>
+                  {gradosAcademicos.map(grado => (
+                    <option key={grado.id} value={grado.id}>{grado.nombre}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <button type="submit" disabled={loading} style={{

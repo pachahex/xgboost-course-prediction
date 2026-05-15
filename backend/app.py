@@ -6,6 +6,7 @@ import bcrypt
 from sqlalchemy import text
 from db import get_db_connection
 import os
+import re
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 import pyotp
@@ -14,7 +15,6 @@ import base64
 from io import BytesIO
 import json
 from utils.email import mail, send_verification_email, send_reset_password_email, send_mass_mailing
-from utils.telemetry import init_telemetry, log_event
 
 app = Flask(__name__)
 # Configuracion de Archivos
@@ -37,7 +37,6 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@autopoiesis.com')
 
 mail.init_app(app)
-init_telemetry(app)
 
 def admin_required(f):
     """Decorador para proteger rutas requiriendo el rol de Administrador usando JWT en Cookies HTTP-Only"""
@@ -52,28 +51,6 @@ def admin_required(f):
                 return jsonify({"error": "No tienes privilegios de Administrador."}), 403
             
             # Pasar info del usuario a la función
-            request.user_info = decoded
-        except jwt.ExpiredSignatureError:
-            return jsonify({"error": "Token expirado. Inicia sesión nuevamente."}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({"error": "Token inválido."}), 401
-            
-        return f(*args, **kwargs)
-    wrap.__name__ = f.__name__
-    return wrap
-
-def dev_required(f):
-    """Decorador para proteger rutas requiriendo el rol de Desarrollador"""
-    def wrap(*args, **kwargs):
-        token = request.cookies.get('access_token')
-        if not token:
-            return jsonify({"error": "No token provisto. Acceso denegado."}), 401
-            
-        try:
-            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            if decoded.get('rol') != 'Desarrollador':
-                return jsonify({"error": "No tienes privilegios de Desarrollador."}), 403
-            
             request.user_info = decoded
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token expirado. Inicia sesión nuevamente."}), 401
@@ -148,16 +125,26 @@ def registro():
             if not rol_id:
                 return jsonify({"error": "Rol Estudiante no configurado en BD."}), 500
                 
-            # Verificar si correo existe
+            # 3. Verificar si el correo ya existe en usuarios
             exists = conn.execute(text("SELECT id FROM usuarios WHERE correo = :correo"), {"correo": correo}).scalar()
             if exists:
                 return jsonify({"error": "El correo ya está registrado."}), 400
-                
+
+            # 4. Verificar si el correo ya estaba suscrito al boletín (como invitado)
+            suscripcion_previa = conn.execute(text("""
+                SELECT id FROM boletin_informativo WHERE correo = :correo AND activo = true
+            """), {"correo": correo}).scalar()
+            
+            suscrito = True if suscripcion_previa else False
+            
+            # 5. Generar Hash de contraseña
             hash_pwd = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
-            conn.execute(text("""
-                INSERT INTO usuarios (rol_id, departamento_id, grado_academico_id, nombre_completo, correo, hash_contrasena, telefono, fecha_nacimiento)
-                VALUES (:rid, :dep_id, :grado_id, :nombre, :correo, :pwd, :tel, :fnac)
+            # 6. Insertar nuevo usuario
+            user_id = conn.execute(text("""
+                INSERT INTO usuarios (rol_id, departamento_id, grado_academico_id, nombre_completo, correo, hash_contrasena, telefono, fecha_nacimiento, suscrito_boletin)
+                VALUES (:rid, :dep_id, :grado_id, :nombre, :correo, :pwd, :tel, :fnac, :sub)
+                RETURNING id
             """), {
                 "rid": rol_id, 
                 "dep_id": departamento_id, 
@@ -166,8 +153,15 @@ def registro():
                 "correo": correo, 
                 "pwd": hash_pwd,
                 "tel": telefono,
-                "fnac": fecha_nacimiento
-            })
+                "fnac": fecha_nacimiento,
+                "sub": suscrito
+            }).scalar()
+
+            # 7. Si tenía suscripción previa, vincular el usuario_id en boletin_informativo
+            if suscripcion_previa:
+                conn.execute(text("""
+                    UPDATE boletin_informativo SET usuario_id = :uid WHERE id = :sid
+                """), {"uid": user_id, "sid": suscripcion_previa})
             
     # Intentar enviar el correo (no bloquea el registro si falla en dev)
     try:
@@ -379,6 +373,96 @@ def logout():
     resp = make_response(jsonify({"message": "Sesión cerrada exitosamente."}))
     resp.set_cookie('access_token', '', expires=0)
     return resp, 200
+
+@app.route('/api/usuario/reenviar-verificacion', methods=['POST'])
+@auth_required
+def reenviar_verificacion():
+    """Permite al usuario solicitar un nuevo link de verificación"""
+    user_id = request.user_info.get('sub') # JWT usa 'sub' para el ID del usuario
+    
+    with get_db_connection() as conn:
+        user = conn.execute(text("SELECT nombre_completo, correo, email_verificado FROM usuarios WHERE id = :uid"), {"uid": user_id}).fetchone()
+        
+        if not user:
+            return jsonify({"error": "Usuario no encontrado."}), 404
+        
+        if user.email_verificado:
+            return jsonify({"error": "Tu cuenta ya está verificada."}), 400
+            
+        try:
+            token = create_email_token(user.correo, 24)
+            send_verification_email(user.correo, user.nombre_completo, token)
+            return jsonify({"message": "Correo de verificación reenviado con éxito."}), 200
+        except Exception as e:
+            return jsonify({"error": f"Error al enviar el correo: {str(e)}"}), 500
+
+@app.route('/api/usuario/actualizar-correo-verificacion', methods=['POST'])
+@auth_required
+def actualizar_correo_verificacion():
+    """Permite cambiar el correo si el actual está mal escrito y aún no ha sido verificado"""
+    user_id = request.user_info.get('sub')
+    new_email = request.json.get('nuevo_correo')
+    
+    if not new_email:
+        return jsonify({"error": "El nuevo correo es obligatorio."}), 400
+        
+    # Validar formato de nuevo correo
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', new_email):
+        return jsonify({"error": "Formato de correo inválido."}), 400
+
+    with get_db_connection() as conn:
+        with conn.begin():
+            # 1. Verificar que el usuario no esté verificado aún
+            user = conn.execute(text("SELECT nombre_completo, email_verificado FROM usuarios WHERE id = :uid"), {"uid": user_id}).fetchone()
+            
+            if not user:
+                return jsonify({"error": "Usuario no encontrado."}), 404
+            
+            if user.email_verificado:
+                return jsonify({"error": "No puedes cambiar el correo de una cuenta ya verificada por este medio."}), 400
+            
+            # 2. Verificar si el nuevo correo ya existe en otro usuario
+            exists = conn.execute(text("SELECT id FROM usuarios WHERE correo = :c AND id != :uid"), {"c": new_email, "uid": user_id}).scalar()
+            if exists:
+                return jsonify({"error": "Este correo ya está registrado por otro usuario."}), 400
+                
+            # 3. Actualizar correo
+            conn.execute(text("UPDATE usuarios SET correo = :c WHERE id = :uid"), {"c": new_email, "uid": user_id})
+            
+            # 4. Enviar nuevo link
+            token = create_email_token(new_email, 24)
+            send_verification_email(new_email, user.nombre_completo, token)
+            
+    return jsonify({"message": "Correo actualizado y nueva verificación enviada."}), 200
+
+@app.route('/api/admin/limpieza-usuarios', methods=['DELETE'])
+@admin_required
+def limpieza_usuarios():
+    """Elimina cuentas que no han sido verificadas después de X días (Default 3)"""
+    dias = request.args.get('dias', 3)
+    
+    with get_db_connection() as conn:
+        with conn.begin():
+            # Nota: En PostgreSQL INTERVAL 'X days' requiere cuidado con parámetros. Usamos concatenación segura.
+            result = conn.execute(text(f"""
+                DELETE FROM usuarios 
+                WHERE email_verificado = false 
+                AND fecha_creacion < (CURRENT_TIMESTAMP - INTERVAL '{dias} days')
+                RETURNING id
+            """)).fetchall()
+            
+    return jsonify({"message": f"Limpieza completada. Se eliminaron {len(result)} cuentas inactivas."}), 200
+
+@app.route('/api/usuario/check-verificacion', methods=['GET'])
+@auth_required
+def check_verificacion():
+    """Consulta el estado real de verificación en la DB para refrescar el frontend"""
+    user_id = request.user_info.get('sub')
+    with get_db_connection() as conn:
+        res = conn.execute(text("SELECT email_verificado FROM usuarios WHERE id = :uid"), {"uid": user_id}).fetchone()
+        if res and res.email_verificado:
+            return jsonify({"verificado": True}), 200
+        return jsonify({"verificado": False}), 200
 
 # ==========================================
 # RUTAS PÚBLICAS
@@ -1057,52 +1141,6 @@ def send_mailing():
         "message": "Campaña enviada exitosamente a la cola de envío.",
         "destinatarios": total_enviados
     })
-
-# ==========================================
-# RUTAS DE DESARROLLADOR (TELEMETRÍA)
-# ==========================================
-
-@app.route('/api/dev/telemetria', methods=['GET'])
-@dev_required
-def get_telemetria():
-    """Retorna los logs de telemetría técnica para el Panel de Desarrollador"""
-    nivel = request.args.get('nivel')
-    limit = int(request.args.get('limit', 100))
-    
-    with get_db_connection() as conn:
-        query_str = "SELECT * FROM telemetria_eventos"
-        params = {"limit": limit}
-        
-        if nivel:
-            query_str += " WHERE nivel_severidad = :lvl"
-            params["lvl"] = nivel
-            
-        query_str += " ORDER BY fecha_evento DESC LIMIT :limit"
-        
-        result = conn.execute(text(query_str), params).fetchall()
-        
-        logs = []
-        for r in result:
-            logs.append({
-                "id": r.id,
-                "nivel": r.nivel_severidad,
-                "evento": r.evento,
-                "detalles": r.detalles,
-                "endpoint": r.endpoint,
-                "metodo": r.metodo,
-                "status_code": r.status_code,
-                "ip": r.ip_origen,
-                "fecha": r.fecha_evento.isoformat()
-            })
-            
-    return jsonify(logs)
-
-@app.route('/api/dev/log-client-error', methods=['POST'])
-def log_client_error():
-    """Endpoint para que el Frontend reporte errores de carga o JS"""
-    data = request.json
-    log_event('ERROR', 'CLIENT_JS_ERROR', detalles=data)
-    return jsonify({"status": "logged"}), 201
 
 if __name__ == '__main__':
     # Habilitamos Flask para escuchar peticiones de Docker u host externo

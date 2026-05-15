@@ -109,37 +109,7 @@ El módulo integra una sección de **Estrategia** que vincula el correo electró
 4.  **Usuario** recibe el correo y se inscribe, generando un dato de "Venta Real" que cerrará el círculo de entrenamiento para la IA.
 
 ---
-## 4. Módulo: Diagnóstico y Telemetría Técnica (Developer Mode)
-**Ubicación:** `frontend/src/pages/dashboard/Telemetria.jsx` | `backend/app.py` (Hooks de telemetría)
-
-Este módulo es la **infraestructura de observabilidad** del sistema. Permite al desarrollador monitorear la salud técnica de la plataforma, detectar errores en tiempo real y asegurar que el flujo de datos hacia la IA sea íntegro y sin fallos ocultos.
-
-### 📊 Relación con XGBoost (Monitoreo de Calidad e Inferencia)
-
-La telemetría es el "escudo" que protege la calidad del pipeline de datos que alimenta al modelo:
-
-| Funcionalidad | Propósito Técnico | Beneficio para la IA |
-| :--- | :--- | :--- |
-| **Log de Errores (404/500)** | Detecta fallos en la recolección de datos. | Evita que el modelo aprenda de periodos con "datos perdidos" debido a caídas del sistema. |
-| **Telemetría de Endpoints** | Mide tiempos de respuesta. | Monitorea la latencia de la inferencia de XGBoost, asegurando que la IA responda en menos de 200ms. |
-| **Audit Log de Usuarios** | Registra acciones significativas. | Permite trazar el "camino del usuario" (User Journey) para entender por qué ciertos perfiles convierten más que otros. |
-| **Overlay de Diagnóstico** | Identifica componentes FE/BE. | Facilita la corrección inmediata de errores en el pipeline de ingeniería de características. |
-
-### 💡 Explicabilidad y Depuración (SHAP Support)
-
-El modo desarrollador facilita la depuración de la "caja negra" de la IA:
-
-- **Detección de Data Drift**: Al loguear las entradas de los usuarios, el desarrollador puede detectar si los datos del mundo real se están alejando de los datos de entrenamiento (Drift), lo que indica que el modelo XGBoost necesita un re-entrenamiento urgente.
-- **Auditoría de Inferencia**: Si una predicción de SHAP parece incoherente, el desarrollador puede consultar los logs de telemetría para ver exactamente qué parámetros se le pasaron al modelo en ese milisegundo exacto.
-
-### 🛠️ Flujo de Diagnóstico
-1.  **Backend** captura automáticamente cada error HTTP y lo persiste en la tabla `telemetria_eventos` con detalles del contexto (IP, User Agent, Endpoint).
-2.  **Desarrollador** activa el "Modo Dev" desde el Dashboard para visualizar la estructura del código mientras navega (Overlays).
-3.  **Sistema** reporta errores de JS en el navegador al backend para que el desarrollador sepa si un usuario tuvo un fallo visual sin necesidad de reportarlo manualmente.
-4.  **Panel de Telemetría** visualiza en tiempo real el flujo de eventos, permitiendo filtrar por criticidad (ERROR, CRITICAL, WARNING).
-
----
-## 5. Módulo: Gestión de Facilitadores y Personal Docente
+## 4. Módulo: Gestión de Facilitadores y Personal Docente
 **Ubicación:** `frontend/src/pages/dashboard/GestorFacilitadores.jsx`
 
 Este módulo gestiona el capital humano de la academia. Los facilitadores son una **variable de influencia indirecta** en la demanda; el prestigio o la especialidad de un docente puede ser un factor determinante para el éxito de un programa.
@@ -152,7 +122,7 @@ Este módulo gestiona el capital humano de la academia. Los facilitadores son un
 
 ---
 
-## 6. Módulo: Inscripciones y Seguimiento de Ventas (Conversión)
+## 5. Módulo: Inscripciones y Seguimiento de Ventas (Conversión)
 **Ubicación:** `frontend/src/pages/dashboard/Inscripciones.jsx` | `NuevaInscripcion.jsx`
 
 Este es el módulo de **etiquetado (Labeling)**. Aquí es donde se registran las conversiones reales que el modelo XGBoost intenta predecir.

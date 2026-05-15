@@ -1,30 +1,25 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap, Settings, Menu, X, LogOut, ArrowLeft, List, Users, UserCheck, UserPlus, Terminal, Activity, Eye, EyeOff } from 'lucide-react';
+import { fetchApi } from '../../api';
+import { Home, ClipboardList, Brain, Mail, ShieldCheck, GraduationCap, Settings, Menu, X, LogOut, ArrowLeft, List, Users, UserCheck, UserPlus } from 'lucide-react';
 import ThemeToggle from '../../components/ThemeToggle';
 
 const DashboardLayout = () => {
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+  const [devMode, setDevMode] = useState(sessionStorage.getItem('devMode') === 'true');
+  const [simulatedRole, setSimulatedRole] = useState(sessionStorage.getItem('simulatedRole') || user.rol);
+  
+  // Estados para Muro de Verificación
+  const [isResending, setIsResending] = useState(false);
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [verificationStatus, setVerificationStatus] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isProgramasOpen, setIsProgramasOpen] = useState(true);
   const [isInscripcionesOpen, setIsInscripcionesOpen] = useState(false);
   const [isFacilitadoresOpen, setIsFacilitadoresOpen] = useState(false);
-  const [devMode, setDevMode] = useState(sessionStorage.getItem('devMode') === 'true');
-  const [simulatedRole, setSimulatedRole] = useState(sessionStorage.getItem('simulatedRole') || user.rol);
-
-  const toggleDevMode = () => {
-    const newVal = !devMode;
-    setDevMode(newVal);
-    sessionStorage.setItem('devMode', newVal);
-    if (!newVal) setSimulatedRole(user.rol);
-  };
-
-  const changeSimulatedRole = (role) => {
-    setSimulatedRole(role);
-    sessionStorage.setItem('simulatedRole', role);
-  };
 
   const getLinkStyle = (path) => ({
     display: 'flex',
@@ -40,13 +35,11 @@ const DashboardLayout = () => {
     transition: 'all 0.2s'
   });
 
-  const isDev = user.rol === 'Desarrollador';
-  const effectiveRole = (isDev && devMode) ? simulatedRole : user.rol;
+  const effectiveRole = user.rol;
   
   // Flags de vista basados estrictamente en el rol efectivo
   const isActualAdmin = effectiveRole === 'Administrador';
   const isActualStudent = effectiveRole === 'Estudiante';
-  const isActualDev = effectiveRole === 'Desarrollador';
   const isActualFacilitator = effectiveRole === 'Facilitador';
 
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
@@ -55,6 +48,60 @@ const DashboardLayout = () => {
     sessionStorage.removeItem('isLoggedIn');
     sessionStorage.removeItem('user');
     navigate('/login');
+  };
+
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    try {
+      const res = await fetchApi('/usuario/reenviar-verificacion', { method: 'POST' });
+      setVerificationStatus(res.message);
+    } catch (err) {
+      setVerificationStatus("Hubo un problema al enviar el correo. Por favor, intenta más tarde.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleUpdateEmail = async (e) => {
+    e.preventDefault();
+    setIsResending(true);
+    try {
+      const res = await fetchApi('/usuario/actualizar-correo-verificacion', {
+        method: 'POST',
+        body: JSON.stringify({ nuevo_correo: newEmail })
+      });
+      // Actualizar usuario en sesión
+      const updatedUser = { ...user, correo: newEmail };
+      sessionStorage.setItem('user', JSON.stringify(updatedUser));
+      setVerificationStatus(res.message);
+      setIsChangingEmail(false);
+    } catch (err) {
+      setVerificationStatus("No se pudo actualizar el correo. Verifica que el formato sea correcto.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleCheckStatus = async () => {
+    setIsResending(true);
+    setVerificationStatus("Consultando estado...");
+    try {
+      const res = await fetchApi('/usuario/check-verificacion');
+      if (res.verificado) {
+        // Actualizar sessionStorage
+        const updatedUser = { ...user, email_verificado: true };
+        sessionStorage.setItem('user', JSON.stringify(updatedUser));
+        setVerificationStatus("¡Perfecto! Tu cuenta ha sido verificada. El panel se habilitará ahora.");
+        // Pequeña pausa para que el usuario lea el éxito
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setVerificationStatus("Aún no detectamos la verificación en la base de datos. Por favor haz clic en el enlace que enviamos a tu correo.");
+      }
+    } catch (err) {
+      setVerificationStatus("No pudimos conectar con el servidor. Revisa tu conexión a internet.");
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -100,7 +147,7 @@ const DashboardLayout = () => {
 
         <div className="desktop-only" style={{ marginBottom: '2rem' }}>
           <div style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.1)', display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'white' }}>
-            {effectiveRole} {devMode && isDev && '(Simulado)'}
+            {effectiveRole}
           </div>
         </div>
 
@@ -115,7 +162,7 @@ const DashboardLayout = () => {
                     setIsProgramasOpen(!isProgramasOpen);
                   }}
                   style={{
-                    ...getLinkStyle(location.pathname.startsWith('/dashboard') && !['/dashboard/inscripciones', '/dashboard/ia-predictiva', '/dashboard/mailing', '/dashboard/telemetria'].includes(location.pathname) ? location.pathname : '/dashboard'),
+                    ...getLinkStyle(location.pathname.startsWith('/dashboard') && !['/dashboard/inscripciones', '/dashboard/ia-predictiva', '/dashboard/mailing'].includes(location.pathname) ? location.pathname : '/dashboard'),
                     width: '100%',
                     border: 'none',
                     cursor: 'pointer',
@@ -223,39 +270,6 @@ const DashboardLayout = () => {
             </Link>
           )}
 
-          {/* VISTA DE DESARROLLADOR (TELEMETRÍA) */}
-          {isActualDev && (
-            <Link to="/dashboard/telemetria" style={getLinkStyle('/dashboard/telemetria')}>
-              <Terminal size={18} /> Telemetría técnica
-            </Link>
-          )}
-
-          {/* CONTROLES GLOBALES DE DESARROLLADOR */}
-          {isDev && (
-            <div style={{ margin: '1rem 0', padding: '0 1rem' }}>
-              <button 
-                onClick={(e) => { e.stopPropagation(); toggleDevMode(); }}
-                style={{
-                  width: '100%',
-                  padding: '0.6rem',
-                  borderRadius: '4px',
-                  border: '1px solid var(--color-accent)',
-                  backgroundColor: devMode ? 'var(--color-accent)' : 'transparent',
-                  color: devMode ? 'white' : 'var(--color-accent)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem'
-                }}
-              >
-                {devMode ? <EyeOff size={16} /> : <Eye size={16} />}
-                {devMode ? 'Salir Modo Dev' : 'Modo Desarrollador'}
-              </button>
-            </div>
-          )}
-
           <div style={{ margin: '1.5rem 0', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
           
           <Link to="/dashboard/preferencias" style={getLinkStyle('/dashboard/preferencias')}>
@@ -319,7 +333,114 @@ const DashboardLayout = () => {
         )}
 
         <div className="dashboard-content-card">
-          {(isActualAdmin || location.pathname !== '/dashboard') ? (
+          {user.email_verificado === false && !isActualAdmin ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <div style={{ 
+                backgroundColor: 'rgba(243, 156, 18, 0.1)', 
+                width: '100px', 
+                height: '100px', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                margin: '0 auto 2rem auto',
+                border: '2px solid #f39c12'
+              }}>
+                <Mail size={50} color="#f39c12" />
+              </div>
+              
+              <h2 style={{ color: 'var(--text-main)', marginBottom: '1.5rem' }}>Verifica tu identidad</h2>
+              <p style={{ color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto 2rem auto', fontSize: '1.1rem', lineHeight: '1.6' }}>
+                Hemos enviado un enlace de confirmación a:<br />
+                <strong style={{ color: 'var(--color-accent)', fontSize: '1.3rem', display: 'block', margin: '0.5rem 0' }}>{user.correo}</strong>
+                Es obligatorio verificar tu cuenta para acceder a los módulos académicos y asegurar la validez de tus futuros certificados.
+              </p>
+
+              {verificationStatus && (
+                <div style={{ 
+                  padding: '1rem', 
+                  backgroundColor: 'rgba(52, 152, 219, 0.1)', 
+                  color: '#3498db', 
+                  borderRadius: '8px', 
+                  marginBottom: '2rem',
+                  maxWidth: '500px',
+                  margin: '0 auto 2rem auto',
+                  border: '1px solid #3498db'
+                }}>
+                  {verificationStatus}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                <button 
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-main)',
+                    padding: '0.8rem 2rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-primary)',
+                    fontWeight: 'bold',
+                    cursor: isResending ? 'not-allowed' : 'pointer',
+                    opacity: isResending ? 0.7 : 1
+                  }}
+                >
+                  {isResending ? 'Procesando...' : 'Reenviar enlace'}
+                </button>
+
+                <button 
+                  onClick={handleCheckStatus}
+                  disabled={isResending}
+                  style={{
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'white',
+                    padding: '0.8rem 2rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    cursor: isResending ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 15px rgba(127, 43, 128, 0.3)'
+                  }}
+                >
+                  {isResending ? 'Verificando...' : 'Ya verifiqué mi cuenta'}
+                </button>
+
+                {!isChangingEmail ? (
+                  <button 
+                    onClick={() => setIsChangingEmail(true)}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    ¿Ingresaste un correo erróneo? Cámbialo aquí
+                  </button>
+                ) : (
+                  <form onSubmit={handleUpdateEmail} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '400px' }}>
+                    <input 
+                      type="email" 
+                      placeholder="Nuevo correo electrónico"
+                      required
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '0.6rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--glass-border)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        color: 'var(--text-main)'
+                      }}
+                    />
+                    <button 
+                      type="submit"
+                      style={{ backgroundColor: 'var(--color-accent)', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                      Actualizar
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          ) : (isActualAdmin || location.pathname !== '/dashboard') ? (
             <Outlet />
           ) : (
             <div style={{ textAlign: 'center', padding: '2rem 0' }}>
@@ -327,93 +448,18 @@ const DashboardLayout = () => {
                 <GraduationCap size={40} color="var(--color-primary)" />
               </div>
               <h2 style={{ color: 'var(--text-main)', marginBottom: '1rem' }}>
-                {isActualFacilitator ? '¡Bienvenido, Facilitador!' : (isActualDev ? '¡Bienvenido al Panel de Control!' : '¡Bienvenido a tu Espacio de Aprendizaje!')}
+                {isActualFacilitator ? '¡Bienvenido, Facilitador!' : '¡Bienvenido a tu Espacio de Aprendizaje!'}
               </h2>
               <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto' }}>
                 {isActualFacilitator 
                   ? 'Como facilitador, pronto tendrás acceso a tus grupos asignados y herramientas pedagógicas. Por ahora, puedes gestionar tu perfil y seguridad.'
-                  : isActualDev 
-                    ? 'Como desarrollador, tienes acceso a la telemetría y diagnóstico del sistema. Activa el Modo Desarrollador para simular otros roles.'
-                    : 'Aquí podrás gestionar tus cursos, certificaciones y preferencias de comunicación. Explora el menú lateral para comenzar.'}
+                  : 'Aquí podrás gestionar tus cursos, certificaciones y preferencias de comunicación. Explora el menú lateral para comenzar.'}
               </p>
-              
-              {isActualDev && (
-                <div style={{ marginTop: '2rem' }}>
-                  <Link 
-                    to="/dashboard/telemetria" 
-                    style={{ 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem', 
-                      backgroundColor: 'var(--color-primary)', 
-                      color: 'white', 
-                      padding: '0.8rem 1.5rem', 
-                      borderRadius: '8px', 
-                      textDecoration: 'none',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    <Terminal size={18} /> Ir a Telemetría Técnica
-                  </Link>
-                </div>
-              )}
             </div>
           )}
         </div>
 
-        {/* Overlay de Diagnóstico (Modo Desarrollador) */}
-        {devMode && isDev && (
-          <div style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            backgroundColor: '#1e272e',
-            color: '#2ecc71',
-            padding: '15px',
-            borderRadius: '12px',
-            fontSize: '0.8rem',
-            fontFamily: 'monospace',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-            zIndex: 9999,
-            border: '1px solid rgba(46, 204, 113, 0.3)',
-            minWidth: '200px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '5px' }}>
-              <span style={{ fontWeight: 'bold' }}>🛠 DIAGNÓSTICO</span>
-              <button 
-                onClick={toggleDevMode}
-                style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer', fontSize: '0.7rem' }}
-              >
-                [Cerrar]
-              </button>
-            </div>
-            
-            <div style={{ marginBottom: '10px' }}>
-              <label style={{ display: 'block', color: '#bdc3c7', marginBottom: '5px', fontSize: '0.7rem' }}>SIMULAR ROL:</label>
-              <select 
-                value={simulatedRole} 
-                onChange={(e) => changeSimulatedRole(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  backgroundColor: '#2f3640', 
-                  color: 'white', 
-                  border: '1px solid #7f8c8d', 
-                  borderRadius: '4px',
-                  padding: '2px',
-                  fontSize: '0.75rem'
-                }}
-              >
-                <option value="Desarrollador">Desarrollador</option>
-                <option value="Administrador">Administrador</option>
-                <option value="Estudiante">Estudiante</option>
-                <option value="Facilitador">Facilitador</option>
-              </select>
-            </div>
 
-            <div style={{ color: '#ecf0f1', marginBottom: '3px' }}>PATH: {location.pathname}</div>
-            <div style={{ color: '#ecf0f1' }}>VIEW: {location.pathname === '/dashboard' ? 'Index (Gestor)' : location.pathname.split('/').pop()}</div>
-          </div>
-        )}
       </main>
     </div>
   );

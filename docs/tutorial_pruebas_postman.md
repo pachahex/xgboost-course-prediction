@@ -242,3 +242,33 @@ Estos endpoints permiten gestionar el catálogo de beneficios que se ofrecen en 
 *   **Comportamiento Esperado:** `201 Created`.
 
 ---
+
+## 11. Gestión Avanzada de Verificación (Verification Wall)
+
+Estos endpoints permiten gestionar el flujo de usuarios que aún no han verificado su correo.
+
+### PASO 11A: Reenviar Enlace de Verificación
+*   **Método:** `POST`
+*   **URL:** `http://localhost:5000/api/usuario/reenviar-verificacion`
+*   **Headers:** Incluir la cookie `access_token` del usuario logueado.
+*   **Comportamiento Esperado:** `200 OK` y envío de un nuevo correo con token válido por 24h.
+
+### PASO 11B: Corregir Correo (Antes de verificar)
+*   **Método:** `POST`
+*   **URL:** `http://localhost:5000/api/usuario/actualizar-correo-verificacion`
+*   **Headers:** Incluir la cookie `access_token` del usuario.
+*   **Body (raw JSON):**
+    ```json
+    {
+      "nuevo_correo": "correo_corregido@ejemplo.com"
+    }
+    ```
+*   **Comportamiento Esperado:** `200 OK`, actualización en DB y envío de nuevo link al nuevo buzón.
+
+### PASO 11C: Limpieza de Cuentas Inactivas (Solo Admin)
+*   **Método:** `DELETE`
+*   **URL:** `http://localhost:5000/api/admin/limpieza-usuarios?dias=3`
+*   **Headers:** Incluir la cookie `access_token` de Administrador.
+*   **Comportamiento Esperado:** `200 OK` con el conteo de registros eliminados (aquellos no verificados creados hace más de X días).
+
+---
