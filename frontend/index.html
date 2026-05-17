@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/autopoiesisLogo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Autopoiesis | Educación de Excelencia</title>
+    <!-- Google tag (gtag.js) - Base de Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W3TTTRY7L8"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      // Desactivamos el envío automático de páginas para manejarlo manualmente en App.jsx (SPA mode)
+      gtag('config', 'G-W3TTTRY7L8', { send_page_view: false });
+    </script>
   </head>
   <body>
     <div id="root"></div>
