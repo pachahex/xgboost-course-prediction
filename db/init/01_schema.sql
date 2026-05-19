@@ -67,13 +67,14 @@ CREATE TABLE usuarios (
     departamento_id INT,
     grado_academico_id INT,
     nombre_completo VARCHAR(150) NOT NULL,
+    ci VARCHAR(20) UNIQUE,
     correo VARCHAR(150) UNIQUE NOT NULL,
     hash_contrasena VARCHAR(255) NOT NULL,
+    requiere_cambio_password BOOLEAN DEFAULT false,
     telefono VARCHAR(20),
     fecha_nacimiento DATE,
     totp_secret VARCHAR(50),
     totp_enabled BOOLEAN DEFAULT false,
-    suscrito_boletin BOOLEAN DEFAULT false,
     email_verificado BOOLEAN DEFAULT false,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_usuario_rol FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT,
@@ -100,8 +101,6 @@ CREATE TABLE programas (
     modalidad_id INT NOT NULL,
     nombre VARCHAR(200) NOT NULL,
     costo_oficial_bs DECIMAL(10, 2) NOT NULL,
-    fecha_inicio DATE,
-    fecha_fin DATE,
     duracion_horas INT,
     imagen_url VARCHAR(255),
     descripcion TEXT,
@@ -139,16 +138,26 @@ CREATE TABLE programa_beneficios (
 -- La tabla 'inscripciones' resuelve la relación N:M (Muchos a Muchos) entre 'usuarios' y 'programas'[cite: 4].
 -- Contiene los registros transaccionales base (OLTP (Procesamiento de Transacciones en Línea)) que el sistema recolectará[cite: 4].
 
+CREATE TABLE cohortes (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    programa_id INT NOT NULL,
+    nombre VARCHAR(150) NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    activo BOOLEAN DEFAULT false,
+    CONSTRAINT fk_cohorte_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE
+);
+
 CREATE TABLE inscripciones (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     usuario_id INT NOT NULL,
-    programa_id INT NOT NULL,
+    cohorte_id INT NOT NULL,
     estado_id INT NOT NULL,
     origen_id INT NOT NULL,
     fecha_inscripcion DATE NOT NULL,
     costo_pagado DECIMAL(10, 2) NOT NULL,
     CONSTRAINT fk_inscripcion_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
-    CONSTRAINT fk_inscripcion_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
+    CONSTRAINT fk_inscripcion_cohorte FOREIGN KEY (cohorte_id) REFERENCES cohortes(id) ON DELETE CASCADE,
     CONSTRAINT fk_inscripcion_estado FOREIGN KEY (estado_id) REFERENCES estados_inscripcion(id) ON DELETE RESTRICT,
     CONSTRAINT fk_inscripcion_origen FOREIGN KEY (origen_id) REFERENCES origenes_captacion(id) ON DELETE RESTRICT
 );
@@ -172,54 +181,36 @@ CREATE TABLE certificados (
     CONSTRAINT fk_certificado_inscripcion FOREIGN KEY (inscripcion_id) REFERENCES inscripciones(id) ON DELETE CASCADE
 );
 
-
 -- ==============================================================================
-
--- 4. Fundamento: Almacenamiento Analítico / Ingeniería de Características[cite: 4]
--- Para que XGBoost (eXtreme Gradient Boosting) no tenga que recalcular agregaciones pesadas en tiempo real, 
--- se persiste un almacén de características[cite: 4].
+-- TABLAS DE MACHINE LEARNING (Fase 4: Predicción Explicable XGBoost + SHAP)
+-- ==============================================================================
 
 CREATE TABLE caracteristicas_demanda_semanal (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     programa_id INT NOT NULL,
     anio INT NOT NULL,
-    semana_del_anio INT NOT NULL CHECK (semana_del_anio >= 1 AND semana_del_anio <= 53),
-    conteo_demanda INT NOT NULL DEFAULT 0,
-    edad_promedio DECIMAL(5, 2),
+    semana_del_anio INT NOT NULL,
+    conteo_demanda INT NOT NULL,
+    edad_promedio DECIMAL(5, 2) NOT NULL,
     seno_semana DOUBLE PRECISION NOT NULL,
     coseno_semana DOUBLE PRECISION NOT NULL,
-    registrado_en TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_caracteristicas_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
-    CONSTRAINT uq_programa_anio_semana UNIQUE (programa_id, anio, semana_del_anio)
-    -- Fundamento: Clave Alterna mediante restricción UNIQUE[cite: 4].
-    -- Garantiza que no existan dos registros de demanda para el mismo programa 
-    -- en la misma semana del mismo año, evitando datos de entrenamiento duplicados[cite: 4].
+    CONSTRAINT fk_cds_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
+    CONSTRAINT uq_cds_periodo UNIQUE (programa_id, anio, semana_del_anio)
 );
-
--- ==============================================================================
-
--- 5. Fundamento: Trazabilidad e Inteligencia Artificial Explicable[cite: 4]
--- Almacena las salidas del modelo predictivo y sus explicaciones matemáticas para 
--- permitir la auditoría de la caja negra[cite: 4].
 
 CREATE TABLE predicciones (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     programa_id INT NOT NULL,
     anio_objetivo INT NOT NULL,
     semana_objetivo INT NOT NULL,
-    demanda_predicha FLOAT NOT NULL,
-    nivel_confianza FLOAT,
-    resumen_shap JSONB,
-    predicho_en TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_prediccion_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE
-    -- Fundamento: Estructuras de Datos No Relacionales en Entornos Relacionales[cite: 4].
-    -- El uso de 'JSONB' (JavaScript Object Notation Binary) permite almacenar el 
-    -- diccionario de variables SHAP (SHapley Additive exPlanations) sin requerir una tabla adicional compleja[cite: 4]. 
-    -- Optimiza la lectura de datos anidados directamente desde el SGBDR 
-    -- (Sistema de Gestión de Bases de Datos Relacionales)[cite: 4].
+    demanda_predicha DOUBLE PRECISION NOT NULL,
+    nivel_confianza DOUBLE PRECISION NOT NULL,
+    resumen_shap JSONB NOT NULL,
+    CONSTRAINT fk_pred_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
+    CONSTRAINT uq_pred_periodo UNIQUE (programa_id, anio_objetivo, semana_objetivo)
 );
 
--- (El módulo de telemetría fue reemplazado por la futura integración con Google Analytics)
+
 -- ==============================================================================
 -- ÍNDICES[cite: 4]
 -- Fundamento: Optimización de Complejidad Temporal[cite: 4].
@@ -227,10 +218,8 @@ CREATE TABLE predicciones (
 -- Reduce la búsqueda secuencial (O(N)) a una búsqueda en árbol B (O(log N))[cite: 4].
 -- ==============================================================================
 
-CREATE INDEX idx_inscripciones_programa_id ON inscripciones(programa_id);
+CREATE INDEX idx_inscripciones_cohorte_id ON inscripciones(cohorte_id);
 CREATE INDEX idx_inscripciones_fecha ON inscripciones(fecha_inscripcion);
-CREATE INDEX idx_caracteristicas_demanda_programa_tiempo ON caracteristicas_demanda_semanal(programa_id, anio, semana_del_anio);
-CREATE INDEX idx_predicciones_programa_tiempo ON predicciones(programa_id, anio_objetivo, semana_objetivo);
 
 -- ==============================================================================
 -- DATOS CATÁLOGO BASE (Bootstrap)
@@ -251,15 +240,15 @@ INSERT INTO categorias (nombre) VALUES
 ON CONFLICT DO NOTHING;
 
 INSERT INTO tipos_servicio (nombre) VALUES 
-('Curso'), ('Diplomado'), ('Masterclass Gratuita') 
+('Curso'), ('Diplomado') 
 ON CONFLICT DO NOTHING;
 
 INSERT INTO estados_inscripcion (nombre) VALUES 
-('Completado'), ('Pendiente'), ('Abandono') 
+('Pendiente de Pago'), ('Activo'), ('Finalizado'), ('Retirado') 
 ON CONFLICT DO NOTHING;
 
 INSERT INTO origenes_captacion (nombre) VALUES 
-('Boletin Informativo'), ('Facebook') 
+('Boletin Informativo'), ('Facebook'), ('Sitio Web (Organico)'), ('Recomendación') 
 ON CONFLICT DO NOTHING;
 
 INSERT INTO modalidades (nombre) VALUES 
@@ -271,5 +260,17 @@ INSERT INTO beneficios (nombre) VALUES
 ON CONFLICT DO NOTHING;
 
 INSERT INTO grados_academicos (nombre) VALUES 
-('Estudiante'), ('Egresado'), ('Profesional'), ('Otros') 
+('Estudiante'), ('Egresado'), ('Profesional') 
 ON CONFLICT DO NOTHING;
+
+-- ==============================================================================
+-- USUARIOS SEMILLA ESENCIALES PARA PRUEBAS (Fase de Bootstrap)
+-- ==============================================================================
+
+INSERT INTO usuarios (rol_id, departamento_id, grado_academico_id, nombre_completo, ci, correo, hash_contrasena, requiere_cambio_password, email_verificado, fecha_nacimiento) 
+VALUES
+((SELECT id FROM roles WHERE nombre = 'Administrador'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Profesional'), 'Administrador Autopoiesis', '1234567', 'juandiegomc.sis@gmail.com', '$2b$12$kI7.BsmNVESA./5YQ/fAmeKGIbAL/59qnYlnQj37CnHcJdZufB/d.', false, true, '1998-09-23'),
+((SELECT id FROM roles WHERE nombre = 'Estudiante'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Estudiante'), 'Juan Diego Mamani Coarite', '75809309', 'mcj2027302@est.univalle.edu', '$2b$12$Sodx0mzzrTBNEqhebuGAy.HIB6CcFb8nf8BPbHtCa1Sx2AM1n3sBW', false, true, '2000-01-01'),
+((SELECT id FROM roles WHERE nombre = 'Estudiante'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Estudiante'), 'Juan Diego Segundo', '75809310', 'juuuuands@gmail.com', '$2b$12$Sodx0mzzrTBNEqhebuGAy.HIB6CcFb8nf8BPbHtCa1Sx2AM1n3sBW', false, true, '2000-01-02'),
+((SELECT id FROM roles WHERE nombre = 'Facilitador'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Profesional'), 'Victor Hugo Aranda', '77777777', 'vhico765@gmail.com', '$2b$12$Sodx0mzzrTBNEqhebuGAy.HIB6CcFb8nf8BPbHtCa1Sx2AM1n3sBW', false, true, '1999-01-01')
+ON CONFLICT (correo) DO NOTHING;

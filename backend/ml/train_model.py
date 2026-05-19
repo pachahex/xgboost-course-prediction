@@ -19,9 +19,12 @@ def main():
         print("1. Extrayendo features desde PostgreSQL (Inscripciones históricas)...")
         df = pd.read_sql("""
             SELECT i.id, p.id as programa_id, p.nombre as programa_nombre, 
-                   i.fecha_inscripcion, i.edad_estudiante
+                   i.fecha_inscripcion, 
+                   COALESCE(EXTRACT(YEAR FROM AGE(i.fecha_inscripcion, u.fecha_nacimiento)), 25)::int as edad_estudiante
             FROM inscripciones i
-            JOIN programas p ON i.programa_id = p.id
+            JOIN cohortes c ON i.cohorte_id = c.id
+            JOIN programas p ON c.programa_id = p.id
+            JOIN usuarios u ON i.usuario_id = u.id
         """, conn)
 
     if df.empty:

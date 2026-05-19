@@ -8,6 +8,7 @@ const GestorProgramas = () => {
   const [tipos, setTipos] = useState([]);
   const [modalidades, setModalidades] = useState([]);
   const [beneficios, setBeneficios] = useState([]);
+  const [facilitadores, setFacilitadores] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // UI & Filter State
@@ -27,12 +28,13 @@ const GestorProgramas = () => {
     categoria_id: '',
     tipo_servicio_id: '',
     modalidad_id: '',
-    fecha_inicio: '',
-    fecha_fin: '',
     duracion_horas: '',
     descripcion: '',
+    fecha_inicio: '',
+    fecha_fin: '',
     activo: false,
-    'beneficios[]': [] // Array para IDs de beneficios
+    'beneficios[]': [], // Array para IDs de beneficios
+    'facilitadores[]': [] // Array para IDs de facilitadores
   });
   const [imagen, setImagen] = useState(null);
   const [status, setStatus] = useState('');
@@ -49,6 +51,9 @@ const GestorProgramas = () => {
       setTipos(cRes.tipos_servicio);
       setModalidades(cRes.modalidades);
       setBeneficios(cRes.beneficios);
+
+      const fRes = await fetchApi('/admin/facilitadores');
+      setFacilitadores(fRes);
     } catch (e) {
       console.error(e);
     } finally {
@@ -66,7 +71,7 @@ const GestorProgramas = () => {
 
     const data = new FormData();
     for (const key in formData) {
-      if (key === 'beneficios[]') {
+      if (key === 'beneficios[]' || key === 'facilitadores[]') {
         formData[key].forEach(val => data.append(key, val));
       } else {
         data.append(key, formData[key]);
@@ -107,12 +112,13 @@ const GestorProgramas = () => {
       categoria_id: cat,
       tipo_servicio_id: tip,
       modalidad_id: mod,
-      fecha_inicio: p.fecha_inicio || '',
-      fecha_fin: p.fecha_fin || '',
       duracion_horas: p.duracion_horas || '',
       descripcion: p.descripcion || '',
+      fecha_inicio: p.fecha_inicio || '',
+      fecha_fin: p.fecha_fin || '',
       activo: p.activo,
-      'beneficios[]': p.beneficios_ids || []
+      'beneficios[]': p.beneficios_ids || [],
+      'facilitadores[]': p.facilitadores_ids || []
     });
     setImagen(null);
     setStatus('Modo edición activado.');
@@ -122,8 +128,13 @@ const GestorProgramas = () => {
     setEditId(null);
     setFormData({
       nombre: '', costo: '', categoria_id: '', tipo_servicio_id: '', modalidad_id: '',
-      fecha_inicio: '', fecha_fin: '', duracion_horas: '',
-      descripcion: '', activo: false, 'beneficios[]': []
+      duracion_horas: '',
+      descripcion: '', 
+      fecha_inicio: '',
+      fecha_fin: '',
+      activo: false, 
+      'beneficios[]': [],
+      'facilitadores[]': []
     });
     setImagen(null);
     setStatus('');
@@ -157,6 +168,21 @@ const GestorProgramas = () => {
       loadData();
       setStatus(`Programa "${p.nombre}" eliminado.`);
       setTimeout(() => setStatus(''), 3000);
+    } catch(err) {
+      alert("Error: " + err.message);
+    }
+  };
+
+  const handleCerrarPrograma = async (p) => {
+    if (!window.confirm(`¿Estás seguro de cerrar la cohorte "${p.nombre}"? Esto pasará a todos los inscritos 'Activos' a 'Finalizado' y a los 'Pendientes' a 'Retirado'. Esta acción ocultará el programa del catálogo público.`)) return;
+
+    try {
+      await fetchApi(`/admin/programas/${p.id}/cerrar`, {
+        method: 'POST'
+      });
+      loadData();
+      setStatus(`Programa "${p.nombre}" cerrado exitosamente.`);
+      setTimeout(() => setStatus(''), 4000);
     } catch(err) {
       alert("Error: " + err.message);
     }
@@ -425,12 +451,22 @@ const GestorProgramas = () => {
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Fecha Inicio</label>
-                  <input type="date" value={formData.fecha_inicio} onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })} style={inputStyle} />
+                  <label style={labelStyle}>Fecha de Inicio</label>
+                  <input
+                    type="date"
+                    value={formData.fecha_inicio}
+                    onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
+                    style={inputStyle}
+                  />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Fecha Fin</label>
-                  <input type="date" value={formData.fecha_fin} onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })} style={inputStyle} />
+                  <label style={labelStyle}>Fecha de Fin</label>
+                  <input
+                    type="date"
+                    value={formData.fecha_fin}
+                    onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
+                    style={inputStyle}
+                  />
                 </div>
               </div>
 
@@ -464,6 +500,35 @@ const GestorProgramas = () => {
                       {b.nombre}
                     </label>
                   ))}
+                </div>
+              </div>
+
+              <div style={{ border: '1px solid var(--glass-border)', padding: '1rem', borderRadius: '6px', backgroundColor: 'var(--bg-page)' }}>
+                <label style={{ ...labelStyle, marginBottom: '0.8rem' }}>Facilitadores Asignados</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  {facilitadores.map(f => (
+                    <label key={f.id} style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-main)' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData['facilitadores[]'].includes(String(f.id)) || formData['facilitadores[]'].includes(f.id)}
+                        onChange={(e) => {
+                          const current = formData['facilitadores[]'];
+                          const next = e.target.checked
+                            ? [...current, f.id]
+                            : current.filter(id => id !== f.id);
+                          setFormData({ ...formData, 'facilitadores[]': next });
+                        }}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--color-primary)' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: '500' }}>{f.nombre}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{f.correo}</div>
+                      </div>
+                    </label>
+                  ))}
+                  {facilitadores.length === 0 && (
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No hay facilitadores registrados en el sistema.</span>
+                  )}
                 </div>
               </div>
 
@@ -548,6 +613,27 @@ const GestorProgramas = () => {
                           >
                             <Pencil size={12} /> Editar
                           </button>
+                          {p.activo && (
+                            <button
+                              onClick={() => handleCerrarPrograma(p)}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '0.7rem',
+                                backgroundColor: '#e67e22',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                marginLeft: '4px'
+                              }}
+                              title="Finalizar Cohorte"
+                            >
+                              <XCircle size={12} /> Cerrar
+                            </button>
+                          )}
                         </div>
                         <h4 style={{ margin: '0.5rem 0', fontSize: '0.9rem' }}>{p.nombre}</h4>
                         <span style={{ fontSize: '0.9rem', color: '#555' }}>{p.costo} Bs.</span>
@@ -600,6 +686,15 @@ const GestorProgramas = () => {
                               >
                                 <Pencil size={16} />
                               </button>
+                              {p.activo && (
+                                <button
+                                  onClick={() => handleCerrarPrograma(p)}
+                                  style={{ padding: '0.5rem', borderRadius: '6px', border: 'none', backgroundColor: 'rgba(230, 126, 34, 0.1)', cursor: 'pointer', color: '#e67e22' }}
+                                  title="Finalizar Cohorte"
+                                >
+                                  <XCircle size={16} />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDelete(p)}
                                 style={{

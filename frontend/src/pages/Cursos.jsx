@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchApi } from '../api';
 import { Zap, BookOpen } from 'lucide-react';
 
@@ -48,7 +49,7 @@ const Cursos = () => {
               <p style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{c.descripcion || "Curso formativo impartido por la academia."}</p>
               <div style={{ marginTop: 'auto', paddingTop: '1.5rem', width: '100%', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--color-accent)', fontWeight: 'bold', fontSize: '1.1rem' }}>{c.costo} Bs.</span>
-                <button style={{ backgroundColor: 'var(--color-accent)', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '4px', border: 'none', fontSize: '0.8rem', fontWeight: 'bold' }}>Ver más</button>
+                <Link to={`/programa/${c.id}`} style={{ backgroundColor: 'var(--color-accent)', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '4px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 'bold' }}>Ver más</Link>
               </div>
             </div>
           ))}

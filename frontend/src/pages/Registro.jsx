@@ -17,7 +17,7 @@ const quotes = [
 
 const Registro = () => {
   const [formData, setFormData] = useState({
-    nombre_completo: '', correo: '', password: '',
+    nombre_completo: '', ci: '', correo: '', password: '',
     telefono: '', fecha_nacimiento: '', grado_academico_id: '', departamento_id: ''
   });
   const [departamentos, setDepartamentos] = useState([]);
@@ -242,9 +242,13 @@ const Registro = () => {
                 </small>
               </div>
               <div>
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', marginBottom: '1rem' }}>
                   <Mail size={18} style={iconStyle} />
                   <input type="email" name="correo" placeholder="Correo electrónico" value={formData.correo} onChange={handleChange} required style={modernInputStyle} />
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <Briefcase size={18} style={iconStyle} />
+                  <input type="text" name="ci" placeholder="Cédula de Identidad (CI)" value={formData.ci} onChange={handleChange} required style={modernInputStyle} />
                 </div>
               </div>
             </div>

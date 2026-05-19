@@ -248,6 +248,9 @@ const DashboardLayout = () => {
                     <Link to="/dashboard/inscripciones/nueva" style={{ ...getLinkStyle('/dashboard/inscripciones/nueva'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
                       <UserPlus size={16} /> Nuevo Ingreso
                     </Link>
+                    <Link to="/dashboard/estudiantes" style={{ ...getLinkStyle('/dashboard/estudiantes'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
+                      <Users size={16} /> Base de Estudiantes
+                    </Link>
                     <Link to="/dashboard/inscripciones" style={{ ...getLinkStyle('/dashboard/inscripciones'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
                       <List size={16} /> Registro Histórico
                     </Link>

@@ -83,32 +83,70 @@ Para mantener la integridad visual y lógica del proyecto, se ha establecido un 
 *   **Captura de Leads:** Formulario en el footer integrado con el endpoint de suscripción.
 *   **Panel Administrativo (Dashboard):** Área privada protegida que permite visualizar el historial de inscripciones mediante tablas con paginación.
 
-### 🔑 Credenciales de Prueba (Sistema de Administración)
-Para acceder al sistema privado y visualizar el dashboard, utiliza los siguientes datos en la ruta `/login`:
+### 🔑 Credenciales de Prueba (Sistema de Seguridad RBAC)
+Para probar los distintos niveles de privilegios (RBAC) y flujos del sistema en la ruta `/login`:
 
-*   **URL de acceso:** [http://localhost:3000/login](http://localhost:3000/login)
-*   **Usuario:** `admin@autopoiesis.com`
-*   **Contraseña:** `admin123`
+*   **Administrador Principal (Dashboard Completo + IA Predictiva):**
+    *   **Correo:** `juuuuands@gmail.com`
+    *   **Contraseña:** `admin123`
+*   **Estudiante de Prueba (Vista de Cursos + Módulo de Inscripciones):**
+    *   **Correo:** `mcj2027302@est.univalle.edu`
+    *   **Contraseña:** `1234567` (o su CI `7654322`)
 
-> **Nota:** El sistema utiliza cookies **HTTP-Only** para la sesión. Si el inicio de sesión es exitoso, serás redirigido automáticamente al panel de control.
+> **Nota de Seguridad:** El sistema utiliza **Cookies HTTP-Only** para transferir tokens JWT de manera segura, impidiendo ataques XSS.
 
-## 🚀 Primeros Pasos: Inicialización de Datos y IA
+---
 
-Una vez que los contenedores estén corriendo por primera vez, la base de datos estará estructurada pero vacía. Debes ejecutar los siguientes comandos para poblar el sistema y activar las predicciones:
+## 🧪 Manual de Flujo de Pruebas Completo
 
-### 1. Generar e Importar Datos (ETL)
-Genera el dataset sintético adaptado a la nueva estructura de base de datos y puebla el sistema con roles, usuarios enriquecidos y miles de inscripciones:
+Sigue esta secuencia de pasos verificada para validar y testear cada uno de los componentes de la plataforma (RBAC, Ingesta, e Inteligencia Artificial):
+
+### Paso 1: Levantar el Ecosistema
+Asegúrate de que los contenedores estén activos y saludables:
 ```bash
-docker exec -it xgboost-course-prediction-backend-1 python data/generate_dataset.py
+docker compose up -d --build
+```
+*El servicio `db` ejecutará automáticamente el archivo `01_schema.sql` y creará los usuarios semilla básicos sin necesidad de ingesta.*
+
+### Paso 2: Probar el Control de Acceso (RBAC)
+1. Ve a [http://localhost:3000/login](http://localhost:3000/login) e inicia sesión con el rol de **Estudiante**:
+   * **Usuario:** `mcj2027302@est.univalle.edu` | **Contraseña:** `1234567`
+2. Una vez dentro, intenta forzar el acceso directo a la URL del administrador escribiendo: [http://localhost:3000/dashboard/inscripciones](http://localhost:3000/dashboard/inscripciones).
+3. **Resultado Esperado:** El sistema denegará la navegación mostrando de forma segura el mensaje *"No tienes privilegios de Administrador"* y bloqueando el acceso al dashboard sensible.
+4. Cierra sesión.
+
+### Paso 3: Acceder como Administrador
+1. Inicia sesión en [http://localhost:3000/login](http://localhost:3000/login) con la cuenta de **Administrador**:
+   * **Usuario:** `juuuuands@gmail.com` | **Contraseña:** `admin123`
+2. **Resultado Esperado:** Acceso exitoso al panel completo del administrador, donde podrás visualizar la barra de navegación lateral y las estadísticas iniciales en tiempo real.
+
+### Paso 4: Ejecutar la Ingesta de Datos (ETL)
+Para poblar el sistema con programas reales de la academia (`seed_programas.json`) y generar ~3000 inscripciones históricas realistas con factores lógicos y temporales adaptados al entrenamiento del modelo predictivo, ejecuta:
+```bash
 docker exec -it xgboost-course-prediction-backend-1 python import_data.py
 ```
-*   **Credenciales Administrador:** `admin@autopoiesis.com` / `admin123`
+*   **Qué hace:**
+    *   Carga la base de datos de programas reales desde `backend/data/seed_programas.json`.
+    *   Genera 2,000 estudiantes simulados distribuidos lógicamente según su grado académico y edad.
+    *   Inserta ~3,000 inscripciones lógicas con temporalidad y estados realistas (Activo, Retirado, Finalizado).
+    *   Genera un archivo consolidado `backend/data/dataset.csv` para inspección rápida de datos.
 
-### 2. Entrenar el Modelo de IA (XGBoost + SHAP)
-Este script procesa los datos históricos, entrena el modelo predictivo y genera los valores de explicabilidad para el Dashboard:
+### Paso 5: Entrenar el Modelo de Inteligencia Artificial (XGBoost + SHAP)
+Con el dataset consolidado en la base de datos PostgreSQL, entrena el modelo de machine learning para predecir la demanda de estudiantes por programa y calcular los valores de explicabilidad SHAP para el Administrador:
 ```bash
 docker exec -it xgboost-course-prediction-backend-1 python ml/train_model.py
 ```
+*   **Qué hace:**
+    *   Realiza el procesamiento y Feature Engineering (cálculo de senos y cosenos cíclicos para temporalidad).
+    *   Entrena un `XGBoostRegressor` para pronosticar el volumen de inscripciones.
+    *   Calcula el impacto explicable de cada variable de entrada (semana del año, edad promedio) mediante la biblioteca `shap`.
+    *   Sube las predicciones y los coeficientes de explicabilidad (`JSONB`) directamente a la base de datos.
+
+### Paso 6: Validar la IA Predictiva en el Dashboard de Recharts
+1. Con la sesión del administrador abierta, ve a la sección **IA Predictiva** o consulta la ruta de la API: [http://localhost:5000/api/admin/predicciones](http://localhost:5000/api/admin/predicciones).
+2. **Resultado Esperado:** Gráficos dinámicos con barras y líneas interactivas que comparan la demanda real de los programas históricos frente a la demanda predicha por XGBoost, detallando los factores SHAP que explican cada predicción en lenguaje natural.
+
+---
 
 ---
 
