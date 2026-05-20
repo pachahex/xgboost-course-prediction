@@ -20,6 +20,7 @@ import Mailing from './pages/dashboard/Mailing';
 import Seguridad from './pages/dashboard/Seguridad';
 import Preferencias from './pages/dashboard/Preferencias';
 import EstudianteDashboard from './pages/dashboard/EstudianteDashboard';
+import FacilitadorDashboard from './pages/dashboard/FacilitadorDashboard';
 import VerificarEmail from './pages/VerificarEmail';
 import ResetPassword from './pages/ResetPassword';
 import './index.css';
@@ -58,6 +59,9 @@ const DashboardIndex = () => {
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   if (user.rol === 'Estudiante') {
     return <EstudianteDashboard />;
+  }
+  if (user.rol === 'Facilitador') {
+    return <FacilitadorDashboard />;
   }
   return <GestorProgramas />;
 };

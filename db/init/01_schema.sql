@@ -271,6 +271,6 @@ INSERT INTO usuarios (rol_id, departamento_id, grado_academico_id, nombre_comple
 VALUES
 ((SELECT id FROM roles WHERE nombre = 'Administrador'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Profesional'), 'Administrador Autopoiesis', '1234567', 'juandiegomc.sis@gmail.com', '$2b$12$kI7.BsmNVESA./5YQ/fAmeKGIbAL/59qnYlnQj37CnHcJdZufB/d.', false, true, '1998-09-23'),
 ((SELECT id FROM roles WHERE nombre = 'Estudiante'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Estudiante'), 'Juan Diego Mamani Coarite', '75809309', 'mcj2027302@est.univalle.edu', '$2b$12$Sodx0mzzrTBNEqhebuGAy.HIB6CcFb8nf8BPbHtCa1Sx2AM1n3sBW', false, true, '2000-01-01'),
-((SELECT id FROM roles WHERE nombre = 'Estudiante'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Estudiante'), 'Juan Diego Segundo', '75809310', 'juuuuands@gmail.com', '$2b$12$Sodx0mzzrTBNEqhebuGAy.HIB6CcFb8nf8BPbHtCa1Sx2AM1n3sBW', false, true, '2000-01-02'),
-((SELECT id FROM roles WHERE nombre = 'Facilitador'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Profesional'), 'Victor Hugo Aranda', '77777777', 'vhico765@gmail.com', '$2b$12$Sodx0mzzrTBNEqhebuGAy.HIB6CcFb8nf8BPbHtCa1Sx2AM1n3sBW', false, true, '1999-01-01')
+((SELECT id FROM roles WHERE nombre = 'Estudiante'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Estudiante'), 'Diego Coarite', '75809310', 'juuuuands@gmail.com', '$2b$12$Sodx0mzzrTBNEqhebuGAy.HIB6CcFb8nf8BPbHtCa1Sx2AM1n3sBW', false, true, '2000-01-02'),
+((SELECT id FROM roles WHERE nombre = 'Facilitador'), 1, (SELECT id FROM grados_academicos WHERE nombre = 'Profesional'), 'Victor Hugo Aranda', '77777777', 'vhico765@gmail.com', '$2b$12$vCp7EEBTlFq.KLenGIvLOeqh7b5PH560y4wnV.tlP3aKRv6ImtLOm', false, true, '1999-01-01')
 ON CONFLICT (correo) DO NOTHING;

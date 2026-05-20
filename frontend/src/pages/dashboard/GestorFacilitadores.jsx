@@ -11,6 +11,7 @@ const GestorFacilitadores = () => {
   
   const [formData, setFormData] = useState({
     nombre_completo: '',
+    ci: '',
     correo: '',
     password: ''
   });
@@ -38,7 +39,7 @@ const GestorFacilitadores = () => {
         method: 'POST',
         body: JSON.stringify(formData)
       });
-      setFormData({ nombre_completo: '', correo: '', password: '' });
+      setFormData({ nombre_completo: '', ci: '', correo: '', password: '' });
       setShowForm(false);
       loadFacilitadores();
       setStatus('Facilitador registrado con éxito');
@@ -123,6 +124,16 @@ const GestorFacilitadores = () => {
               />
             </div>
             <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Carnet de Identidad (CI)</label>
+              <input
+                required
+                style={inputStyle}
+                value={formData.ci}
+                onChange={e => setFormData({...formData, ci: e.target.value})}
+                placeholder="Ej. 77777777"
+              />
+            </div>
+            <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Correo Electrónico</label>
               <input
                 required
@@ -135,13 +146,13 @@ const GestorFacilitadores = () => {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Contraseña (Opcional)</label>
-              <input
-                type="password"
-                style={inputStyle}
-                value={formData.password}
-                onChange={e => setFormData({...formData, password: e.target.value})}
-                placeholder="Por defecto: facilitador123"
-              />
+                <input
+                  type="password"
+                  style={inputStyle}
+                  value={formData.password}
+                  onChange={e => setFormData({...formData, password: e.target.value})}
+                  placeholder="Por defecto: será su CI"
+                />
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '1rem' }}>
               <button

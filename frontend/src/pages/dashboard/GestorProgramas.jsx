@@ -17,6 +17,7 @@ const GestorProgramas = () => {
   const [filters, setFilters] = useState({
     search: '',
     categoria: '',
+    tipo: '',
     modalidad: '',
     activo: 'all'
   });
@@ -214,10 +215,11 @@ const GestorProgramas = () => {
   const filteredProgramas = programas.filter(p => {
     const matchesSearch = p.nombre.toLowerCase().includes(filters.search.toLowerCase());
     const matchesCat = filters.categoria === '' || p.categoria === filters.categoria;
+    const matchesTipo = filters.tipo === '' || p.tipo === filters.tipo;
     const matchesMod = filters.modalidad === '' || p.modalidad === filters.modalidad;
     const matchesStatus = filters.activo === 'all' || (filters.activo === 'active' ? p.activo : !p.activo);
 
-    return matchesSearch && matchesCat && matchesMod && matchesStatus;
+    return matchesSearch && matchesCat && matchesTipo && matchesMod && matchesStatus;
   });
 
   return (
@@ -297,6 +299,15 @@ const GestorProgramas = () => {
           >
             <option value="">Todas las Categorías</option>
             {categorias.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+          </select>
+
+          <select
+            value={filters.tipo}
+            onChange={(e) => setFilters({ ...filters, tipo: e.target.value })}
+            style={{ ...inputStyle, width: 'auto', minWidth: '150px' }}
+          >
+            <option value="">Todos los Tipos</option>
+            {tipos.map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
           </select>
 
           <select

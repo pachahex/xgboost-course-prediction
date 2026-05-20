@@ -100,7 +100,9 @@ const EstudianteDashboard = () => {
             ¡Hola, {user.nombre || 'Estudiante'}!
           </h1>
           <p style={{ margin: 0, opacity: 0.9, fontSize: '1.1rem' }}>
-            Te damos la bienvenida a tu centro de control académico. Aquí puedes gestionar tu aprendizaje y certificados.
+            {inscripciones.length > 0 
+              ? `¡Estás inscrito en ${inscripciones.length} programa(s) académico(s)! Continúa con tu aprendizaje.`
+              : `Te damos la bienvenida a tu centro de control académico. Aquí puedes gestionar tu aprendizaje y certificados.`}
           </p>
         </div>
         <div style={{ 
@@ -221,7 +223,20 @@ const EstudianteDashboard = () => {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.5rem' }}>
                       <h3 style={{ margin: 0, fontSize: '1.35rem', color: 'var(--text-main)' }}>{insc.programa}</h3>
-                      <span style={getStatusBadgeStyle(insc.estado)}>{insc.estado}</span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {insc.tipo_servicio && (
+                          <span style={{
+                            padding: '0.4rem 0.8rem',
+                            borderRadius: '20px',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold',
+                            backgroundColor: 'rgba(127, 43, 128, 0.15)',
+                            color: 'var(--color-primary-dark)',
+                            border: '1px solid rgba(127, 43, 128, 0.3)'
+                          }}>{insc.tipo_servicio}</span>
+                        )}
+                        <span style={getStatusBadgeStyle(insc.estado)}>{insc.estado}</span>
+                      </div>
                     </div>
                     
                     <p style={{ margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 'bold' }}>
@@ -237,21 +252,25 @@ const EstudianteDashboard = () => {
                         <Clock size={16} />
                         <span><strong>Carga Horaria:</strong> {insc.duracion_horas || 40} Horas</span>
                       </div>
+                      {insc.costo_pagado !== undefined && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          <Award size={16} />
+                          <span><strong>Monto Invertido:</strong> Bs. {insc.costo_pagado}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Barra de Progreso Temporal (Solo si está Activo) */}
-                  {insc.estado === 'Activo' && (
-                    <div style={{ marginTop: 'auto', marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: '600' }}>
-                        <span>Progreso del periodo</span>
-                        <span>{progress}% Transcurrido</span>
-                      </div>
-                      <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: `${progress}%`, height: '100%', backgroundColor: 'var(--color-accent)', borderRadius: '4px', transition: 'width 0.5s ease-out' }} />
-                      </div>
+                  {/* Barra de Progreso Temporal de la Cohorte */}
+                  <div style={{ marginTop: 'auto', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontWeight: '600' }}>
+                      <span>Progreso de la Cohorte</span>
+                      <span>{progress}% Transcurrido</span>
                     </div>
-                  )}
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${progress}%`, height: '100%', backgroundColor: 'var(--color-accent)', borderRadius: '4px', transition: 'width 0.5s ease-out' }} />
+                    </div>
+                  </div>
 
                   {/* Acciones */}
                   <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>

@@ -443,7 +443,7 @@ const DashboardLayout = () => {
                 )}
               </div>
             </div>
-          ) : (isActualAdmin || location.pathname !== '/dashboard') ? (
+          ) : (isActualAdmin || isActualStudent || isActualFacilitator || location.pathname !== '/dashboard') ? (
             <Outlet />
           ) : (
             <div style={{ textAlign: 'center', padding: '2rem 0' }}>

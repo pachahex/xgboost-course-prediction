@@ -118,127 +118,90 @@ def run_import():
                               """)).fetchall()]
             
             # ==============================================================================
-            # FASE 2: INGEST (Generación Histórica Realista - ~3000 Inscripciones)
+            # FASE 2: INGEST (Consumo de Semilla de Estudiantes JSON)
             # ==============================================================================
-            print("\nGenerando datos históricos para Machine Learning (~3000 registros)...")
-            num_estudiantes = 2000
-            print("Limpiando estudiantes históricos anteriores...")
+            print("\nGenerando datos históricos para Machine Learning a partir del dataset...")
+            print("1. Limpiando estudiantes históricos anteriores...")
             conn.execute(text("DELETE FROM usuarios WHERE correo LIKE '%@historico.local'"))
             
+            SEED_ESTUDIANTES_PATH = os.path.join(os.path.dirname(__file__), 'data', 'seed_estudiantes.json')
+            print("2. Cargando estudiantes históricos desde semilla JSON...")
+            with open(SEED_ESTUDIANTES_PATH, 'r', encoding='utf-8') as f:
+                estudiantes_json = json.load(f)
+            
             usuarios_batch = []
+            dummy_hash = 'HISTORICO_SIN_ACCESO'
             
-            print("1. Creando 2000 estudiantes históricos en memoria...")
-            
-            # Usaremos un hash dummy muy simple para no gastar CPU (ej. password123)
-            # En producción esto tomaría demasiado tiempo, pero para seeds locales está bien si limitamos
-            # Usamos un solo hash cacheado:
-            dummy_hash = hash_password("1234567")
-            
-            seen_cis = set()
-            
-            for i in range(num_estudiantes):
-                grado = random.choices(['Estudiante', 'Egresado', 'Profesional'], weights=[0.4, 0.3, 0.3])[0]
-                
-                if grado == 'Estudiante': edad = random.randint(18, 24)
-                elif grado == 'Egresado': edad = random.randint(22, 28)
-                else: edad = random.randint(25, 50)
-                
-                fecha_nacimiento = datetime.date.today() - datetime.timedelta(days=edad*365)
-                
-                # Generar CI boliviano realista y único
-                while True:
-                    ci = f"{random.randint(4000000, 14000000)}"
-                    if ci not in seen_cis:
-                        seen_cis.add(ci)
-                        break
-                        
-                correo_ficticio = f"user{i}_{ci}@historico.local"
-                nombre = fake.name()
-                
-                # Fuerte predominancia en La Paz (oficina principal)
-                dep_nombre = random.choices(list(dep_map.keys()), weights=[0.75, 0.10, 0.05, 0.02, 0.02, 0.02, 0.01, 0.01, 0.01, 0.01])[0]
-                
+            for est in estudiantes_json:
                 usuarios_batch.append({
                     "rid": role_map['Estudiante'],
-                    "did": dep_map[dep_nombre],
-                    "gid": grado_map[grado],
-                    "nom": nombre,
-                    "ci": ci,
-                    "correo": correo_ficticio,
+                    "did": dep_map.get(est['departamento']) or list(dep_map.values())[0],
+                    "gid": grado_map.get(est['grado_academico']) or list(grado_map.values())[0],
+                    "nom": est['nombre_completo'],
+                    "ci": est['ci'],
+                    "correo": est['correo'],
                     "pwd": dummy_hash,
-                    "req_pwd": True,
-                    "fnac": fecha_nacimiento,
+                    "req_pwd": False,
+                    "fnac": est['fecha_nacimiento'],
                 })
             
-            print("  -> Insertando usuarios a la DB...")
+            print(f"  -> Insertando {len(usuarios_batch)} usuarios a la DB...")
             conn.execute(text("""
                 INSERT INTO usuarios (rol_id, departamento_id, grado_academico_id, nombre_completo, ci, correo, hash_contrasena, requiere_cambio_password, fecha_nacimiento, email_verificado)
                 VALUES (:rid, :did, :gid, :nom, :ci, :correo, :pwd, :req_pwd, :fnac, true)
                 ON CONFLICT (correo) DO NOTHING
             """), usuarios_batch)
             
-            # Map memory users to their DB IDs
-            estudiantes = [{"id": row[0], "grado": row[1], "did": row[2], "fnac": row[3], "ci": row[4]} 
-                           for row in conn.execute(text("SELECT u.id, g.nombre, u.departamento_id, u.fecha_nacimiento, u.ci FROM usuarios u JOIN grados_academicos g ON u.grado_academico_id = g.id WHERE u.correo LIKE '%@historico.local'")).fetchall()]
+            # Map memory users to their DB IDs by CI
+            db_estudiantes = {str(row[1]): row[0] for row in conn.execute(text("SELECT id, ci FROM usuarios WHERE correo LIKE '%@historico.local'")).fetchall()}
             
-            num_inscripciones = 3000
+            # ==============================================================================
+            # FASE 3: INGEST (Consumo de Inscripciones CSV)
+            # ==============================================================================
+            CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'dataset.csv')
+            print(f"3. Cargando inscripciones desde {CSV_PATH}...")
+            df = pd.read_csv(CSV_PATH)
+            
+            # Organizar cohortes por programa para búsqueda rápida
+            cohortes_por_programa = {}
+            for c in cohortes_info:
+                if c["prog_nombre"] not in cohortes_por_programa:
+                    cohortes_por_programa[c["prog_nombre"]] = []
+                cohortes_por_programa[c["prog_nombre"]].append(c)
+                
             inscripciones_batch = []
             
-            print("2. Generando ~3000 inscripciones con reglas lógicas...")
-            
-            for _ in range(num_inscripciones):
-                est = random.choice(estudiantes)
+            for _, row in df.iterrows():
+                ci = str(row['CI_Estudiante']).strip()
+                if ci not in db_estudiantes:
+                    continue
                 
-                if est["grado"] == 'Estudiante':
-                    progs_posibles = [p for p in cohortes_info if p["tipo"] == ts_map['Curso']]
-                elif est["grado"] == 'Egresado':
-                    progs_posibles = [p for p in cohortes_info if p["tipo"] in (ts_map['Curso'], ts_map['Diplomado'])]
-                else: 
-                    progs_posibles = [p for p in cohortes_info if p["tipo"] == ts_map['Diplomado']] if random.random() < 0.7 else [p for p in cohortes_info if p["tipo"] == ts_map['Curso']]
+                uid = db_estudiantes[ci]
+                prog_nom = row['Programa_Cohorte']
                 
-                if not progs_posibles:
-                    progs_posibles = cohortes_info
-                
-                cohorte_elegido = random.choice(progs_posibles)
-                
-                dias_antes = random.randint(1, 30)
-                fecha_inscripcion = cohorte_elegido["fecha_inicio"] - datetime.timedelta(days=dias_antes)
-                
-                costo_pagado = cohorte_elegido["costo"]
-                if random.random() < 0.3:
-                    costo_pagado = round(costo_pagado * 0.85, 2)
-                
-                if cohorte_elegido["fecha_inicio"] < datetime.date.today():
-                    estado = random.choices(['Finalizado', 'Retirado'], weights=[0.8, 0.2])[0]
-                else:
-                    estado = random.choices(['Activo', 'Pendiente de Pago'], weights=[0.7, 0.3])[0]
+                # Si el programa no existe en las cohortes actuales (por alguna razón), saltar
+                if prog_nom not in cohortes_por_programa or not cohortes_por_programa[prog_nom]:
+                    continue
                     
-                # Recomendación y Facebook como orígenes más probables
-                origenes_keys = list(origen_map.keys())
-                pesos_origenes = []
-                for o_key in origenes_keys:
-                    if o_key == 'Recomendación': pesos_origenes.append(0.40)
-                    elif o_key == 'Facebook': pesos_origenes.append(0.40)
-                    elif o_key == 'Sitio Web (Organico)': pesos_origenes.append(0.15)
-                    else: pesos_origenes.append(0.05)
+                # Elegimos una cohorte al azar del programa para la inscripción histórica
+                cohorte = random.choice(cohortes_por_programa[prog_nom])
+                cid = cohorte["id"]
                 
-                origen = random.choices(origenes_keys, weights=pesos_origenes)[0]
+                fecha_inscripcion = row['Fecha_Inscripcion']
+                costo = row['Costo_Pagado_Bs']
+                estado_str = row['Estado']
+                origen_str = row['Origen_Captacion']
+                
+                eid = estado_map.get(estado_str, estado_map.get('Finalizado', list(estado_map.values())[0]))
+                oid = origen_map.get(origen_str, origen_map.get('Facebook', list(origen_map.values())[0]))
                 
                 inscripciones_batch.append({
-                    "uid": est["id"],
-                    "cid": cohorte_elegido["id"],
-                    "eid": estado_map[estado],
-                    "oid": origen_map[origen],
+                    "uid": uid,
+                    "cid": cid,
+                    "eid": eid,
+                    "oid": oid,
                     "f": fecha_inscripcion,
-                    "c": costo_pagado,
-                    # Extras for CSV:
-                    "est_ci": est["ci"],
-                    "est_grado": est["grado"],
-                    "est_dep": rev_dep_map[est["did"]],
-                    "est_fnac": est["fnac"],
-                    "prog_nom": cohorte_elegido["prog_nombre"],
-                    "estado_str": estado,
-                    "origen_str": origen
+                    "c": costo
                 })
             
             unique_insc = {}
@@ -247,37 +210,16 @@ def run_import():
                 if key not in unique_insc:
                     unique_insc[key] = ins
             
-            db_insc_batch = [{"uid": ins["uid"], "cid": ins["cid"], "eid": ins["eid"], "oid": ins["oid"], "f": ins["f"], "c": ins["c"]} for ins in unique_insc.values()]
+            db_insc_batch = list(unique_insc.values())
             
             print(f"  -> Insertando {len(db_insc_batch)} inscripciones a la DB...")
-            conn.execute(text("""
-                INSERT INTO inscripciones (usuario_id, cohorte_id, estado_id, origen_id, fecha_inscripcion, costo_pagado)
-                VALUES (:uid, :cid, :eid, :oid, :f, :c)
-            """), db_insc_batch)
-            
-            # Export CSV
-            print("3. Exportando dataset.csv para revisión...")
-            dataset_rows = []
-            for ins in unique_insc.values():
-                edad = (ins["f"] - ins["est_fnac"]).days // 365
-                dataset_rows.append({
-                    "CI_Estudiante": ins["est_ci"],
-                    "Edad_Inscripcion": edad,
-                    "Grado": ins["est_grado"],
-                    "Departamento": ins["est_dep"],
-                    "Programa_Cohorte": ins["prog_nom"],
-                    "Fecha_Inscripcion": ins["f"],
-                    "Costo_Pagado_Bs": ins["c"],
-                    "Estado": ins["estado_str"],
-                    "Origen_Captacion": ins["origen_str"]
-                })
-            
-            df = pd.DataFrame(dataset_rows)
-            csv_path = os.path.join(os.path.dirname(__file__), 'data', 'dataset.csv')
-            df.to_csv(csv_path, index=False)
-            print(f"  -> Dataset guardado en: {csv_path}")
+            if db_insc_batch:
+                conn.execute(text("""
+                    INSERT INTO inscripciones (usuario_id, cohorte_id, estado_id, origen_id, fecha_inscripcion, costo_pagado)
+                    VALUES (:uid, :cid, :eid, :oid, :f, :c)
+                """), db_insc_batch)
 
-    print("\n✅ Proceso de Importación finalizado con éxito.")
+    print("\n✅ Proceso de Importación finalizado con éxito (Modo Cargador).")
     print("Administrador: juandiegomc.sis@gmail.com / admin123")
 
 if __name__ == "__main__":

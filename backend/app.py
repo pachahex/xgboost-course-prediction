@@ -15,6 +15,7 @@ import base64
 from io import BytesIO
 import json
 from utils.email import mail, send_verification_email, send_reset_password_email, send_mass_mailing
+from utils.dashboard_stats import get_dashboard_full_stats
 
 app = Flask(__name__)
 # Configuracion de Archivos
@@ -1224,10 +1225,14 @@ def create_facilitador():
     data = request.json
     nombre = data.get('nombre_completo')
     correo = data.get('correo')
-    password = data.get('password', 'facilitador123') # Password por defecto si no se provee
+    ci = data.get('ci')
     
-    if not nombre or not correo:
-        return jsonify({"error": "Nombre y correo son obligatorios."}), 400
+    if not nombre or not correo or not ci:
+        return jsonify({"error": "Nombre, correo y CI son obligatorios."}), 400
+        
+    password = data.get('password')
+    if not password:
+        password = ci # Password por defecto es el CI
         
     with get_db_connection() as conn:
         with conn.begin():
@@ -1238,9 +1243,9 @@ def create_facilitador():
                 
             hash_pwd = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             conn.execute(text("""
-                INSERT INTO usuarios (rol_id, nombre_completo, correo, hash_contrasena, email_verificado)
-                VALUES (:rid, :nombre, :correo, :pwd, true)
-            """), {"rid": rol_id, "nombre": nombre, "correo": correo, "pwd": hash_pwd})
+                INSERT INTO usuarios (rol_id, nombre_completo, ci, correo, hash_contrasena, email_verificado)
+                VALUES (:rid, :nombre, :ci, :correo, :pwd, true)
+            """), {"rid": rol_id, "nombre": nombre, "ci": ci, "correo": correo, "pwd": hash_pwd})
             
     return jsonify({"message": "Facilitador registrado con éxito."}), 201
 
@@ -1360,6 +1365,17 @@ def get_predicciones():
     # Invertir para que vengan cronológicamente en los gráficos de Recharts
     return jsonify(predicciones[::-1])
 
+@app.route('/api/admin/dashboard/stats', methods=['GET'])
+@admin_required
+def get_dashboard_stats():
+    """Retorna las métricas agregadas para los 9 gráficos del Dashboard."""
+    try:
+        stats = get_dashboard_full_stats()
+        return jsonify(stats)
+    except Exception as e:
+        print("Error en get_dashboard_stats:", e)
+        return jsonify({"error": "Error interno del servidor", "details": str(e)}), 500
+
 @app.route('/api/seguridad/2fa/setup', methods=['GET'])
 @auth_required
 def setup_2fa():
@@ -1391,7 +1407,7 @@ def setup_2fa():
     img = qr.make_image(fill_color="black", back_color="white")
     
     buffered = BytesIO()
-    img.save(buffered, format="PNG")
+    img.save(buffered)
     qr_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
     
     return jsonify({
@@ -1435,7 +1451,7 @@ def usuario_inscripciones():
             JOIN estados_inscripcion ei ON i.estado_id = ei.id
             WHERE i.usuario_id = :uid
             ORDER BY c.fecha_inicio DESC
-        """), {"uid": g.user_id}).fetchall()
+        """), {"uid": request.user_info['sub']}).fetchall()
         
         inscripciones = []
         for r in result:
@@ -1453,6 +1469,32 @@ def usuario_inscripciones():
                 "costo_total": float(r.costo_oficial_bs)
             })
     return jsonify(inscripciones)
+
+@app.route('/api/usuario/facilitador/programas', methods=['GET'])
+@auth_required
+def facilitador_programas():
+    """Lista los programas asignados al facilitador autenticado"""
+    with get_db_connection() as conn:
+        result = conn.execute(text("""
+            SELECT p.id, p.nombre, p.duracion_horas, p.imagen_url, p.tipo_servicio_id,
+                   c.nombre as categoria
+            FROM programa_facilitadores pf
+            JOIN programas p ON pf.programa_id = p.id
+            JOIN categorias c ON p.categoria_id = c.id
+            WHERE pf.facilitador_id = :uid AND p.eliminado = false
+        """), {"uid": request.user_info['sub']}).fetchall()
+        
+        programas = []
+        for r in result:
+            programas.append({
+                "id": r.id,
+                "nombre": r.nombre,
+                "duracion_horas": r.duracion_horas,
+                "imagen_url": r.imagen_url,
+                "tipo_servicio": "Diplomado" if r.tipo_servicio_id == 2 else "Curso",
+                "categoria": r.categoria
+            })
+    return jsonify(programas)
 
 @app.route('/api/usuario/inscribir', methods=['POST'])
 @auth_required
