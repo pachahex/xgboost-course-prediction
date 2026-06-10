@@ -185,29 +185,15 @@ CREATE TABLE certificados (
 -- TABLAS DE MACHINE LEARNING (Fase 4: Predicción Explicable XGBoost + SHAP)
 -- ==============================================================================
 
-CREATE TABLE caracteristicas_demanda_semanal (
+CREATE TABLE recomendaciones_lanzamiento (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    fecha_proyeccion DATE NOT NULL,
     programa_id INT NOT NULL,
-    anio INT NOT NULL,
-    semana_del_anio INT NOT NULL,
-    conteo_demanda INT NOT NULL,
-    edad_promedio DECIMAL(5, 2) NOT NULL,
-    seno_semana DOUBLE PRECISION NOT NULL,
-    coseno_semana DOUBLE PRECISION NOT NULL,
-    CONSTRAINT fk_cds_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
-    CONSTRAINT uq_cds_periodo UNIQUE (programa_id, anio, semana_del_anio)
-);
-
-CREATE TABLE predicciones (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    programa_id INT NOT NULL,
-    anio_objetivo INT NOT NULL,
-    semana_objetivo INT NOT NULL,
-    demanda_predicha DOUBLE PRECISION NOT NULL,
+    inscritos_proyectados INT NOT NULL,
     nivel_confianza DOUBLE PRECISION NOT NULL,
     resumen_shap JSONB NOT NULL,
-    CONSTRAINT fk_pred_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE,
-    CONSTRAINT uq_pred_periodo UNIQUE (programa_id, anio_objetivo, semana_objetivo)
+    fecha_calculo TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rec_programa FOREIGN KEY (programa_id) REFERENCES programas(id) ON DELETE CASCADE
 );
 
 

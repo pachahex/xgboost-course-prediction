@@ -1,13 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { fetchApi } from '../../api';
 import { Award, BookOpen, Calendar, Clock, Filter, Search, Users, Activity, BarChart2 } from 'lucide-react';
+
+// Calcular progreso temporal de la cohorte
+const getCohortProgress = (startStr, endStr) => {
+  if (!startStr || !endStr || startStr === 'None' || endStr === 'None') return 0;
+  try {
+    const start = new Date(startStr).getTime();
+    const end = new Date(endStr).getTime();
+    const now = new Date().getTime();
+    if (now < start) return 0;
+    if (now > end) return 100;
+    const totalTime = end - start;
+    const elapsed = now - start;
+    return Math.round((elapsed / totalTime) * 100);
+  } catch {
+    return 0;
+  }
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr || dateStr === 'None') return 'Por definir';
+  try {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateStr).toLocaleDateString('es-ES', options);
+  } catch {
+    return dateStr;
+  }
+};
+
+const thStyle = { 
+  padding: '1rem', 
+  backgroundColor: 'var(--bg-page)', 
+  textAlign: 'left', 
+  color: 'var(--text-main)', 
+  borderBottom: '2px solid var(--glass-border)',
+  transition: 'background-color 0.3s, color 0.3s, border-color 0.3s'
+};
+
+const tdStyle = { 
+  padding: '1rem', 
+  borderBottom: '1px solid var(--glass-border)',
+  color: 'var(--text-main)',
+  transition: 'border-color 0.3s, color 0.3s'
+};
 
 const Inscripciones = () => {
   const [data, setData] = useState([]);
   const [cohortes, setCohortes] = useState([]);
   const [selectedCohorte, setSelectedCohorte] = useState('');
-  const [cohortesFilter, setCohortesFilter] = useState('active'); // 'all', 'active', 'closed'
-  const [loading, setLoading] = useState(true);
+  const [cohortesFilter, setCohortesFilter] = useState('active'); // 'active', 'closed'
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -19,14 +62,19 @@ const Inscripciones = () => {
   }, []);
 
   useEffect(() => {
+    if (!selectedCohorte) {
+      setData([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
+
     const loadInscripciones = async () => {
       setLoading(true);
       setError('');
       try {
         const queryParams = new URLSearchParams({ page, limit: 50 });
-        if (selectedCohorte) {
-          queryParams.append('cohorte_id', selectedCohorte);
-        }
+        queryParams.append('cohorte_id', selectedCohorte);
         const res = await fetchApi(`/admin/inscripciones?${queryParams.toString()}`);
         setData(res.data);
         setTotal(res.total);
@@ -39,56 +87,18 @@ const Inscripciones = () => {
     loadInscripciones();
   }, [page, selectedCohorte]);
 
-  // Calcular progreso temporal de la cohorte
-  const getCohortProgress = (startStr, endStr) => {
-    if (!startStr || !endStr || startStr === 'None' || endStr === 'None') return 0;
-    try {
-      const start = new Date(startStr).getTime();
-      const end = new Date(endStr).getTime();
-      const now = new Date().getTime();
-      if (now < start) return 0;
-      if (now > end) return 100;
-      const totalTime = end - start;
-      const elapsed = now - start;
-      return Math.round((elapsed / totalTime) * 100);
-    } catch {
-      return 0;
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr || dateStr === 'None') return 'Por definir';
-    try {
-      const options = { year: 'numeric', month: 'short', day: 'numeric' };
-      return new Date(dateStr).toLocaleDateString('es-ES', options);
-    } catch {
-      return dateStr;
-    }
-  };
-
   // Filtrar las cohortes para el selector y el sumario superior
-  const visibleCohortes = cohortes.filter(c => {
-    if (cohortesFilter === 'active') return c.activo;
-    if (cohortesFilter === 'closed') return !c.activo;
-    return true;
-  });
+  const visibleCohortes = useMemo(() => {
+    return cohortes.filter(c => {
+      if (cohortesFilter === 'active') return c.activo;
+      if (cohortesFilter === 'closed') return !c.activo;
+      return true;
+    });
+  }, [cohortes, cohortesFilter]);
 
-  const activeCohortes = cohortes.filter(c => c.activo);
-
-  const thStyle = { 
-    padding: '1rem', 
-    backgroundColor: 'var(--bg-page)', 
-    textAlign: 'left', 
-    color: 'var(--text-main)', 
-    borderBottom: '2px solid var(--glass-border)',
-    transition: 'background-color 0.3s, color 0.3s, border-color 0.3s'
-  };
-  const tdStyle = { 
-    padding: '1rem', 
-    borderBottom: '1px solid var(--glass-border)',
-    color: 'var(--text-main)',
-    transition: 'border-color 0.3s, color 0.3s'
-  };
+  const activeCohortes = useMemo(() => {
+    return cohortes.filter(c => c.activo);
+  }, [cohortes]);
 
   return (
     <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
@@ -140,7 +150,7 @@ const Inscripciones = () => {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                       <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: '700' }}>
-                        {c.programa_nombre}
+                        {c.programa_nombre} {c.programa_tipo && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>({c.programa_tipo})</span>}
                       </h4>
                       <span style={{ 
                         fontSize: '0.75rem', 
@@ -242,7 +252,6 @@ const Inscripciones = () => {
               >
                 <option value="active">Cohortes Activas</option>
                 <option value="closed">Cohortes Cerradas</option>
-                <option value="all">Todas las Cohortes</option>
               </select>
             </div>
 
@@ -310,7 +319,7 @@ const Inscripciones = () => {
                   <div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.5px' }}>Filtro de Cohorte Activo</span>
                     <h4 style={{ margin: '0.1rem 0 0 0', color: 'var(--text-main)', fontSize: '1.1rem', fontWeight: 'bold' }}>
-                      Programa: <span style={{ color: 'var(--color-primary-dark)' }}>{selectedProgName}</span>
+                      Programa: <span style={{ color: 'var(--color-primary-dark)' }}>{selectedProgName}</span> {selectedCohorteObj.programa_tipo && <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>({selectedCohorteObj.programa_tipo})</span>}
                     </h4>
                   </div>
                   <div>
@@ -329,11 +338,13 @@ const Inscripciones = () => {
               ) : null;
             })()}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
-                Mostrando resultados {total === 0 ? 0 : ((page-1)*50) + 1} a {Math.min(page*50, total)} de <strong>{total}</strong> transacciones.
-              </p>
-            </div>
+            {selectedCohorte && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>
+                  Mostrando resultados {total === 0 ? 0 : ((page-1)*50) + 1} a {Math.min(page*50, total)} de <strong>{total}</strong> transacciones.
+                </p>
+              </div>
+            )}
             
             <div style={{ overflowX: 'auto' }}>
               {(() => {
@@ -354,7 +365,13 @@ const Inscripciones = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.length === 0 ? (
+                      {!selectedCohorte ? (
+                        <tr>
+                          <td colSpan={showProgCoh ? 9 : 7} style={{ ...tdStyle, textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                            Selecciona una cohorte de la lista superior para visualizar sus inscritos.
+                          </td>
+                        </tr>
+                      ) : data.length === 0 ? (
                         <tr>
                           <td colSpan={showProgCoh ? 9 : 7} style={{ ...tdStyle, textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                             No se encontraron inscripciones para la cohorte seleccionada.
@@ -409,48 +426,71 @@ const Inscripciones = () => {
               })()}
             </div>
 
-            {/* Wrapper Paginación */}
+            {/* Paginación */}
             {total > 50 && (
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                marginTop: '2rem',
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '1rem',
+                marginTop: '1.5rem',
+                padding: '1.5rem 0 0 0',
                 borderTop: '1px solid var(--glass-border)',
-                paddingTop: '1.5rem'
+                flexWrap: 'wrap'
               }}>
-                <button 
-                  disabled={page === 1} 
-                  onClick={() => setPage(page-1)}
-                  style={{ 
-                    padding: '0.5rem 1.2rem', 
+                <button
+                  disabled={page === 1}
+                  onClick={() => {
+                    setPage(prev => Math.max(prev - 1, 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{
+                    padding: '0.6rem 1.2rem',
                     borderRadius: '6px',
                     border: '1px solid var(--glass-border)',
                     backgroundColor: 'var(--bg-page)',
-                    color: 'var(--text-main)',
+                    color: page === 1 ? 'var(--text-muted)' : 'var(--text-main)',
                     cursor: page === 1 ? 'not-allowed' : 'pointer',
-                    opacity: page === 1 ? 0.5 : 1,
-                    fontWeight: 'bold'
+                    fontWeight: '600',
+                    transition: 'all 0.2s',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  &larr; Anterior
+                  Anterior
                 </button>
-                <span style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>Página {page} de {Math.ceil(total / 50)}</span>
-                <button 
-                  disabled={page * 50 >= total} 
-                  onClick={() => setPage(page+1)}
-                  style={{ 
-                    padding: '0.5rem 1.2rem', 
+                
+                <span style={{
+                  color: 'var(--text-main)',
+                  fontWeight: '600',
+                  fontSize: '0.95rem',
+                  userSelect: 'none'
+                }}>
+                  Página {page} de {Math.ceil(total / 50)}
+                </span>
+
+                <button
+                  disabled={page * 50 >= total}
+                  onClick={() => {
+                    setPage(prev => Math.min(prev + 1, Math.ceil(total / 50)));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{
+                    padding: '0.6rem 1.2rem',
                     borderRadius: '6px',
                     border: '1px solid var(--glass-border)',
                     backgroundColor: 'var(--bg-page)',
-                    color: 'var(--text-main)',
+                    color: page * 50 >= total ? 'var(--text-muted)' : 'var(--text-main)',
                     cursor: page * 50 >= total ? 'not-allowed' : 'pointer',
-                    opacity: page * 50 >= total ? 0.5 : 1,
-                    fontWeight: 'bold'
+                    fontWeight: '600',
+                    transition: 'all 0.2s',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  Siguiente &rarr;
+                  Siguiente
                 </button>
               </div>
             )}

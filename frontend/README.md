@@ -1,16 +1,54 @@
-# React + Vite
+# Frontend - Academia Autopoiesis
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este directorio contiene la aplicación cliente (interfaz de usuario) desarrollada con React y Vite.
 
-Currently, two official plugins are available:
+## Tecnologías Principales
+- **React 18**
+- **Vite**
+- **React Router DOM** (enrutamiento SPA)
+- **Recharts** (gráficos y proyecciones visuales)
+- **Lucide React** (iconografía)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Cómo iniciar el proyecto (Docentes / Tribunal)
 
-## React Compiler
+Para levantar **todo el ecosistema** (Frontend, Backend, Base de Datos y Jupyter) de forma automática sin necesidad de instalar NodeJS ni Python en tu computadora, solo necesitas Docker y ejecutar el siguiente comando desde la **raíz del proyecto** (una carpeta atrás):
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+docker-compose up -d --build
+```
 
-## Expanding the ESLint configuration
+Una vez que los contenedores estén corriendo, el frontend estará disponible en:
+👉 **http://localhost:3000**
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Comandos Adicionales del Sistema (se ejecutan desde la raíz)
+Si es la primera vez que levantas el proyecto o la base de datos está vacía, necesitas importar los datos iniciales y entrenar el modelo de Inteligencia Artificial. Puedes hacerlo ejecutando estos comandos en la terminal:
+
+1. **Importar datos a la base de datos PostgreSQL:**
+```bash
+docker exec -it xgboost-course-prediction-backend-1 python import_data.py
+```
+
+2. **Entrenar el modelo predictivo XGBoost (Genera métricas y archivo .pkl):**
+```bash
+docker exec -it xgboost-course-prediction-backend-1 python ml/train_model.py
+```
+
+---
+*Para más detalles sobre la API y la inteligencia artificial, consulta el `README.md` ubicado en la carpeta `/backend`.*
+
+## Principios de Diseño y Arquitectura
+- **Estética Académica**: Diseño limpio y profesional usando fuentes modernas (Inter/Outfit) y efectos Glassmorphism.
+- **Iconografía**: Se utiliza `lucide-react`.
+
+## Comunicación con la API
+- **Helper Central**: Utilizar `fetchApi` de `src/api.js`.
+- Este helper maneja automáticamente `credentials: 'include'` para cookies HTTP-Only y detecta el envío de `FormData` para subida de archivos (imágenes).
+
+## Gestión de Estado y UI
+- **Borrado Lógico**: La eliminación de programas es lógica para preservar datos para la IA.
+- **Responsividad**: Enfoque Mobile-First. El Dashboard oculta la barra lateral en dispositivos móviles.
+- **Optimizaciones**: Uso de `localStorage` para persistir preferencias (ej. viewMode) y carga diferida (lazy loading) para imágenes.
+
+## Autenticación
+- Reglas de negocio estrictas: Mínimo 16 años, nombres completos reales.
+- Las contraseñas requieren alta seguridad y se integran validaciones de correo electrónico obligatorias.

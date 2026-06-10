@@ -7,34 +7,41 @@ def get_dashboard_full_stats():
     with get_db_connection() as conn:
         # Gráfico 1 & 6: Inscritos Históricos vs Esperados (Serie de tiempo general)
         # Sumamos la demanda real vs predicha por semana/año a nivel global
-        res_tiempo = conn.execute(text("""
-            SELECT 
-                COALESCE(c.anio, p.anio_objetivo) as anio,
-                COALESCE(c.semana_del_anio, p.semana_objetivo) as semana,
-                SUM(COALESCE(c.conteo_demanda, 0)) as historico,
-                SUM(COALESCE(p.demanda_predicha, 0)) as esperado
-            FROM predicciones p
-            FULL OUTER JOIN caracteristicas_demanda_semanal c 
-                ON p.programa_id = c.programa_id AND p.anio_objetivo = c.anio AND p.semana_objetivo = c.semana_del_anio
-            GROUP BY 1, 2
-            ORDER BY 1, 2
-            LIMIT 24
-        """)).fetchall()
-        
-        chart_serie_tiempo = [{"name": f"S{row[1]}-{row[0]}", "historico": int(row[2]), "esperado": round(float(row[3]), 2)} for row in res_tiempo]
+        try:
+            res_tiempo = conn.execute(text("""
+                SELECT 
+                    COALESCE(c.anio, p.anio_objetivo) as anio,
+                    COALESCE(c.semana_del_anio, p.semana_objetivo) as semana,
+                    SUM(COALESCE(c.conteo_demanda, 0)) as historico,
+                    SUM(COALESCE(p.demanda_predicha, 0)) as esperado
+                FROM predicciones p
+                FULL OUTER JOIN caracteristicas_demanda_semanal c 
+                    ON p.programa_id = c.programa_id AND p.anio_objetivo = c.anio AND p.semana_objetivo = c.semana_del_anio
+                GROUP BY 1, 2
+                ORDER BY 1, 2
+                LIMIT 24
+            """)).fetchall()
+            chart_serie_tiempo = [{"name": f"S{row[1]}-{row[0]}", "historico": int(row[2]), "esperado": round(float(row[3]), 2)} for row in res_tiempo]
+        except Exception:
+            conn.rollback() # Rollback the failed transaction
+            chart_serie_tiempo = []
         
         # Gráfico 2 & 3: Top Programas Recomendados y Peores Programas (En Riesgo)
         # Basado en la suma de demanda predicha
-        res_progs = conn.execute(text("""
-            SELECT pr.nombre, SUM(p.demanda_predicha) as total_predicho
-            FROM predicciones p
-            JOIN programas pr ON p.programa_id = pr.id
-            GROUP BY pr.nombre
-            ORDER BY total_predicho DESC
-        """)).fetchall()
-        
-        chart_top_programas = [{"name": row[0], "value": round(float(row[1]), 2)} for row in res_progs[:5]]
-        chart_peores_programas = [{"name": row[0], "value": round(float(row[1]), 2)} for row in res_progs[-5:]] if len(res_progs) > 5 else []
+        try:
+            res_progs = conn.execute(text("""
+                SELECT pr.nombre, SUM(p.demanda_predicha) as total_predicho
+                FROM predicciones p
+                JOIN programas pr ON p.programa_id = pr.id
+                GROUP BY pr.nombre
+                ORDER BY total_predicho DESC
+            """)).fetchall()
+            chart_top_programas = [{"name": row[0], "value": round(float(row[1]), 2)} for row in res_progs[:5]]
+            chart_peores_programas = [{"name": row[0], "value": round(float(row[1]), 2)} for row in res_progs[-5:]] if len(res_progs) > 5 else []
+        except Exception:
+            conn.rollback()
+            chart_top_programas = []
+            chart_peores_programas = []
         
         # Gráfico 4: Demanda Histórica por Categoría
         res_cat = conn.execute(text("""
@@ -50,28 +57,32 @@ def get_dashboard_full_stats():
         
         # Gráfico 5: Impacto SHAP General
         # Promediamos los valores absolutos de SHAP de todas las predicciones para ver qué variable pesa más
-        res_shap = conn.execute(text("SELECT resumen_shap FROM predicciones LIMIT 100")).fetchall()
-        shap_avg = {"programa_id": 0, "semana": 0, "edad": 0, "seno_semana": 0, "coseno_semana": 0}
-        total_shap = 0
-        for (shap_str,) in res_shap:
-            if shap_str:
-                s = json.loads(shap_str)
-                shap_avg["programa_id"] += abs(s.get("programa_id_impact", 0))
-                shap_avg["semana"] += abs(s.get("semana_del_anio_impact", 0))
-                shap_avg["edad"] += abs(s.get("edad_promedio_impact", 0))
-                shap_avg["seno_semana"] += abs(s.get("seno_semana_impact", 0))
-                shap_avg["coseno_semana"] += abs(s.get("coseno_semana_impact", 0))
-                total_shap += 1
-                
-        if total_shap > 0:
-            chart_impacto_shap = [
-                {"name": "Programa", "impact": round(shap_avg["programa_id"]/total_shap, 4)},
-                {"name": "Semana del Año", "impact": round(shap_avg["semana"]/total_shap, 4)},
-                {"name": "Edad Promedio", "impact": round(shap_avg["edad"]/total_shap, 4)},
-                {"name": "Temporada (Sen)", "impact": round(shap_avg["seno_semana"]/total_shap, 4)},
-                {"name": "Temporada (Cos)", "impact": round(shap_avg["coseno_semana"]/total_shap, 4)}
-            ]
-        else:
+        try:
+            res_shap = conn.execute(text("SELECT resumen_shap FROM predicciones LIMIT 100")).fetchall()
+            shap_avg = {"programa_id": 0, "semana": 0, "edad": 0, "seno_semana": 0, "coseno_semana": 0}
+            total_shap = 0
+            for (shap_str,) in res_shap:
+                if shap_str:
+                    s = json.loads(shap_str)
+                    shap_avg["programa_id"] += abs(s.get("programa_id_impact", 0))
+                    shap_avg["semana"] += abs(s.get("semana_del_anio_impact", 0))
+                    shap_avg["edad"] += abs(s.get("edad_promedio_impact", 0))
+                    shap_avg["seno_semana"] += abs(s.get("seno_semana_impact", 0))
+                    shap_avg["coseno_semana"] += abs(s.get("coseno_semana_impact", 0))
+                    total_shap += 1
+                    
+            if total_shap > 0:
+                chart_impacto_shap = [
+                    {"name": "Programa", "impact": round(shap_avg["programa_id"]/total_shap, 4)},
+                    {"name": "Semana del Año", "impact": round(shap_avg["semana"]/total_shap, 4)},
+                    {"name": "Edad Promedio", "impact": round(shap_avg["edad"]/total_shap, 4)},
+                    {"name": "Temporada (Sen)", "impact": round(shap_avg["seno_semana"]/total_shap, 4)},
+                    {"name": "Temporada (Cos)", "impact": round(shap_avg["coseno_semana"]/total_shap, 4)}
+                ]
+            else:
+                chart_impacto_shap = []
+        except Exception:
+            conn.rollback()
             chart_impacto_shap = []
             
         # Gráfico 7: Distribución de Edades Histórica

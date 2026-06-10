@@ -11,6 +11,8 @@ import Registro from './pages/Registro';
 import DashboardLayout from './pages/dashboard/DashboardLayout';
 import Inscripciones from './pages/dashboard/Inscripciones';
 import IAPredictiva from './pages/dashboard/IAPredictiva';
+import IAPredictivaDetalle from './pages/dashboard/IAPredictivaDetalle';
+import FichaTecnicaModelo from './pages/dashboard/FichaTecnicaModelo';
 import GestorProgramas from './pages/dashboard/GestorProgramas';
 import GestorEstudiantes from './pages/dashboard/GestorEstudiantes';
 import GestorBeneficios from './pages/dashboard/GestorBeneficios';
@@ -147,6 +149,16 @@ function App() {
               <Route path="ia-predictiva" element={
                 <RoleRoute allowedRoles={['Administrador']}>
                   <IAPredictiva />
+                </RoleRoute>
+              } />
+              <Route path="ia-predictiva/detalle" element={
+                <RoleRoute allowedRoles={['Administrador']}>
+                  <IAPredictivaDetalle />
+                </RoleRoute>
+              } />
+              <Route path="ia-predictiva/ficha-tecnica" element={
+                <RoleRoute allowedRoles={['Administrador']}>
+                  <FichaTecnicaModelo />
                 </RoleRoute>
               } />
               <Route path="mailing" element={

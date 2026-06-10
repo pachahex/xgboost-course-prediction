@@ -1,7 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchApi } from '../../api';
 import { UserPlus, BookOpen, DollarSign, Calendar, Info, CheckCircle, UserCheck, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const inputStyle = {
+  padding: '0.8rem',
+  borderRadius: '6px',
+  border: '1px solid var(--glass-border)',
+  backgroundColor: 'var(--bg-page)',
+  color: 'var(--text-main)',
+  fontSize: '0.95rem',
+  width: '100%',
+  boxSizing: 'border-box',
+  outline: 'none',
+  marginBottom: '1rem'
+};
 
 const NuevaInscripcion = () => {
   const [loading, setLoading] = useState(true);
@@ -44,6 +57,20 @@ const NuevaInscripcion = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const searchContainerRef = useRef(null);
+
+  // Buscador interactivo optimizado con useMemo
+  const filteredEstudiantes = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    const term = searchTerm.toLowerCase().trim();
+    return estudiantes.filter(est => {
+      return (
+        (est.nombre && est.nombre.toLowerCase().includes(term)) ||
+        (est.ci && est.ci.toLowerCase().includes(term)) ||
+        (est.correo && est.correo.toLowerCase().includes(term)) ||
+        (est.telefono && est.telefono.toLowerCase().includes(term))
+      );
+    });
+  }, [estudiantes, searchTerm]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -92,6 +119,61 @@ const NuevaInscripcion = () => {
 
       // 1. Si es nuevo estudiante, registrarlo primero
       if (isNewStudent) {
+        // Validar nombre completo (mínimo 2 palabras)
+        const nameParts = formData.nuevo_estudiante.nombre_completo.trim().split(/\s+/);
+        if (nameParts.length < 2) {
+          alert("El nombre completo debe contener al menos nombre y apellido (mínimo 2 palabras) para asegurar la validez de los certificados.");
+          setSubmitting(false);
+          return;
+        }
+
+        // Validar Cédula de Identidad (CI) - Mínimo 5 caracteres
+        const ci = formData.nuevo_estudiante.ci.trim();
+        if (ci.length < 5) {
+          alert("La Cédula de Identidad (CI) debe tener al menos 5 caracteres.");
+          setSubmitting(false);
+          return;
+        }
+
+        // Validar que el CI no esté duplicado
+        const ciExists = estudiantes.some(est => est.ci && est.ci.trim().toLowerCase() === ci.toLowerCase());
+        if (ciExists) {
+          alert("La Cédula de Identidad (CI) ingresada ya se encuentra registrada para otro estudiante.");
+          setSubmitting(false);
+          return;
+        }
+
+        // Validar que el Correo no esté duplicado
+        const email = formData.nuevo_estudiante.correo.trim().toLowerCase();
+        const emailExists = estudiantes.some(est => est.correo && est.correo.trim().toLowerCase() === email);
+        if (emailExists) {
+          alert("El correo electrónico ingresado ya se encuentra registrado para otro estudiante.");
+          setSubmitting(false);
+          return;
+        }
+
+        // Validar rango coherente de fecha de nacimiento
+        const birthDate = new Date(formData.nuevo_estudiante.fecha_nacimiento);
+        const minDate = new Date('1900-01-01');
+        const today = new Date();
+        if (isNaN(birthDate.getTime()) || birthDate < minDate || birthDate > today) {
+          alert("Por favor, ingrese una fecha de nacimiento válida (entre el año 1900 y el día de hoy).");
+          setSubmitting(false);
+          return;
+        }
+
+        // Validar edad (mínimo 16 años)
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        if (age < 16) {
+          alert("El estudiante debe tener al menos 16 años de edad.");
+          setSubmitting(false);
+          return;
+        }
+
         const estudianteData = {
           ...formData.nuevo_estudiante,
           password: formData.nuevo_estudiante.ci // Usamos el CI como contraseña por defecto
@@ -125,19 +207,6 @@ const NuevaInscripcion = () => {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const inputStyle = {
-    padding: '0.8rem',
-    borderRadius: '6px',
-    border: '1px solid var(--glass-border)',
-    backgroundColor: 'var(--bg-page)',
-    color: 'var(--text-main)',
-    fontSize: '0.95rem',
-    width: '100%',
-    boxSizing: 'border-box',
-    outline: 'none',
-    marginBottom: '1rem'
   };
 
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando formularios...</div>;
@@ -384,19 +453,9 @@ const NuevaInscripcion = () => {
                         padding: '0.4rem 0'
                       }}
                     >
-                      {(() => {
-                        const term = searchTerm.toLowerCase().trim();
-                        const filtered = estudiantes.filter(est => {
-                          return (
-                            (est.nombre && est.nombre.toLowerCase().includes(term)) ||
-                            (est.ci && est.ci.toLowerCase().includes(term)) ||
-                            (est.correo && est.correo.toLowerCase().includes(term)) ||
-                            (est.telefono && est.telefono.toLowerCase().includes(term))
-                          );
-                        });
-
-                        if (filtered.length > 0) {
-                          return filtered.map(est => (
+                      {filteredEstudiantes.length > 0 ? (
+                        <>
+                          {filteredEstudiantes.slice(0, 8).map(est => (
                             <div
                               key={est.id}
                               onClick={() => {
@@ -453,22 +512,32 @@ const NuevaInscripcion = () => {
                                 )}
                               </div>
                             </div>
-                          ));
-                        } else {
-                          return (
-                            <div 
-                              style={{ 
-                                padding: '2rem 1rem', 
-                                textAlign: 'center', 
-                                color: 'var(--text-muted)',
-                                fontSize: '0.9rem' 
-                              }}
-                            >
-                              No se encontraron estudiantes para <strong style={{ color: 'var(--color-primary)' }}>"{searchTerm}"</strong>
+                          ))}
+                          {filteredEstudiantes.length > 8 && (
+                            <div style={{ 
+                              padding: '0.6rem 1.2rem', 
+                              textAlign: 'center', 
+                              fontSize: '0.75rem', 
+                              color: 'var(--text-muted)', 
+                              backgroundColor: 'rgba(0,0,0,0.02)',
+                              fontWeight: '600'
+                            }}>
+                              Mostrando 8 de {filteredEstudiantes.length} resultados. Escribe más para refinar la búsqueda.
                             </div>
-                          );
-                        }
-                      })()}
+                          )}
+                        </>
+                      ) : (
+                        <div 
+                          style={{ 
+                            padding: '2rem 1rem', 
+                            textAlign: 'center', 
+                            color: 'var(--text-muted)',
+                            fontSize: '0.9rem' 
+                          }}
+                        >
+                          No se encontraron estudiantes para <strong style={{ color: 'var(--color-primary)' }}>"{searchTerm}"</strong>
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -538,7 +607,13 @@ const NuevaInscripcion = () => {
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>
                 <Calendar size={14} /> Fecha de Inscripción
               </label>
-              <input required type="date" style={inputStyle} value={formData.fecha_inscripcion} onChange={e => setFormData({...formData, fecha_inscripcion: e.target.value})} />
+              <input 
+                required 
+                type="date" 
+                style={{ ...inputStyle, opacity: 0.7, cursor: 'not-allowed' }} 
+                value={formData.fecha_inscripcion} 
+                readOnly 
+              />
             </div>
 
             <div>

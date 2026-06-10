@@ -3,7 +3,7 @@
         "nombre": "DEPENDENCIA EMOCIONAL",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -11,7 +11,7 @@
         "nombre": "OBJETIVOS SEGÚN PARADIGMA Y ENFOQUE",
         "categoria": "Investigación",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -27,7 +27,7 @@
         "nombre": "POTENCIA TUS COMPETENCIAS INVESTIGATIVAS",
         "categoria": "Investigación",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -35,7 +35,7 @@
         "nombre": "GRAFOLOGIA Y TEST PROYECTIVOS",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -43,7 +43,7 @@
         "nombre": "HERRAMIENTAS TECNOLOGICAS",
         "categoria": "Tecnología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -75,7 +75,7 @@
         "nombre": "ESTRATEGIAS PARA DOMINAR EL ESTRES EN TIEMPOS DE CRISIS",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -91,7 +91,7 @@
         "nombre": "TRABAJOS DE GRADO E INVESTIGACIÓN",
         "categoria": "Investigación",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -99,7 +99,7 @@
         "nombre": "PREVENCION EN ACCION FAMILIA Y ESCUELA UNIDAS CONTRA EL ACOSO ESCOLAR (BULLYNG)",
         "categoria": "Educación",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -115,7 +115,7 @@
         "nombre": "INTERPRETACION DEL DIBUJO INFANTIL Y TEST PROYECTIVOS",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -123,7 +123,7 @@
         "nombre": "EVALUACION E INTERVENCION TEMPRANA EN NIÑOS CON TRANSTORNOS DEL ESPECTRO AUTISTA",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -131,7 +131,7 @@
         "nombre": "CORRECCION DE ESTILO PARA TEXTOS ACADEMICOS",
         "categoria": "Investigación",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -139,7 +139,7 @@
         "nombre": "DERECHO DE FAMILIA (PROCESO FAMILIAR, LEY 348)",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -147,7 +147,7 @@
         "nombre": "TRANSTORNOS DE ANSIEDAD EN NIÑOS Y ADOLESCENTES",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -163,7 +163,7 @@
         "nombre": "DERECHO DE FAMILIA VIOLENCIA INTRAFAMILIAR LEY 348 Y MEDIDAS DE PROTECCION",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -171,7 +171,7 @@
         "nombre": "TECNICAS DE LITIGACION Y BENEFICIOS PENITENCIARIOS",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -195,7 +195,7 @@
         "nombre": "TECNICAS E INTERVENCION DE TERAPIA EN PAREJA",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -203,7 +203,7 @@
         "nombre": "TECNICAS AVANZADAS DE INVESTIGACION CRIMINAL EN EL MARCO DE LA CRIMINOLOGIA APLICADA",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -227,7 +227,7 @@
         "nombre": "TRANSTORNOS DE LA CONDUCTA ALIMENTARIA EN NIÑOS Y ADOLESCENTES",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -235,7 +235,7 @@
         "nombre": "DSM-T-TR Y CIE-11: APLICACION DESDE LA TEORIA A LA PRACTICA",
         "categoria": "Salud",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -259,7 +259,7 @@
         "nombre": "SINDROME DE NIÑO EMPERADOR: NIÑOS TIRANOS",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -267,7 +267,7 @@
         "nombre": "TRANSTORNOS PSICOTICOS: CLASIFICACION, DIAGNOSTICO Y ACOMPAÑAMIENTO PRICOLOGICO TERAPEUTICO",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -275,7 +275,7 @@
         "nombre": "PROBLEMAS DE CONDUCTA EN LA PRIMERA INFANCIA: ¿CRISIS O BERRINCHE?",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -283,7 +283,7 @@
         "nombre": "TECNOLOGIAS WEB",
         "categoria": "Tecnología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -291,7 +291,7 @@
         "nombre": "NEUROPEDAGOGIA APLICADA EN LOS PROBLEMAS DEL APRENDIZAJE",
         "categoria": "Educación",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -323,7 +323,7 @@
         "nombre": "RECONICIMIENTO DE LOS TRANSTORNOS MENTALES PSICOLOGIA FORENSE",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -339,7 +339,7 @@
         "nombre": "ESQUIZOFRENIA, TRANSTORNO BIPOLAR, PSICOPATIAS Y TRANSTORNOS MENTALES",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -363,7 +363,7 @@
         "nombre": "LEY 1178 BAJO EL ENFOQUE DE CONTROL GUBERNAMENTAL: SAFCO",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -379,7 +379,7 @@
         "nombre": "TENDENCIAS ACTUALES DE LOS DELITOS DE CORRUPCION Y SU APLICACION PENAL",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -387,7 +387,7 @@
         "nombre": "PLASMA RICO EN PLAQUETAS",
         "categoria": "Salud",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -395,7 +395,7 @@
         "nombre": "ATENCION, CONTROL Y TRATAMIENTO DE HEMORRAIGAS EN TRAUMA",
         "categoria": "Salud",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -403,7 +403,7 @@
         "nombre": "TERAPIA COGNITIVA CONDUCTUAL EN NIÑOS Y ADOLESCENTES",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -419,7 +419,7 @@
         "nombre": "APLICACION PENAL DE LA NORMATIVA VIGENTE EN DELITOS DE CORRUPCION",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -427,7 +427,7 @@
         "nombre": "REDUCCION DE SENTENCIAS EN EL SISTEMA BOLIVIANO",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -435,7 +435,7 @@
         "nombre": "PREVENCION DEL ACOSO ESCOLAR (BULLYNG) INTERVENCION EN CRISIS",
         "categoria": "Educación",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -443,7 +443,7 @@
         "nombre": "INFORME PERICIAL EN SALUD MENTAL FORENSE",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -451,7 +451,7 @@
         "nombre": "INFORME FORENSE Y PERITAJE PSICOLOGICO",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -459,7 +459,7 @@
         "nombre": "MANEJO DE EXPEDIENTE CLINICO: PROCESO MEDICO",
         "categoria": "Salud",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -475,7 +475,7 @@
         "nombre": "DERECHO FAMILIAR Y SU PROCEDIMIENTO: ASISTENCIA FAMILIAR LEY 603",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -483,7 +483,7 @@
         "nombre": "TRAMITES EN DERECHOS REALES",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -491,7 +491,7 @@
         "nombre": "PREVENCION DE ABUSO SEXUAL INFANTIL DESDE LA FAMILIA",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -499,7 +499,7 @@
         "nombre": "PROCESO INMEDIATO AL DELITO DE OMISION A LA ASITENCIA FAMILIAR LEY 603",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -523,7 +523,7 @@
         "nombre": "CAMARA GESELL EN PROCESOS JUDICIALES",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -539,7 +539,7 @@
         "nombre": "PRIMEROS AUXILIOS",
         "categoria": "Salud",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -555,7 +555,7 @@
         "nombre": "ESTADO DE DERECHO Y ORDEN CONSTITUCIONAL",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 130.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -563,7 +563,7 @@
         "nombre": "ECOGRAFIA GENERAL",
         "categoria": "Salud",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 120.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -571,7 +571,7 @@
         "nombre": "EJECUCION PENAL Y APLICACION DE BENEFICIOS PENITENCIARIOS",
         "categoria": "Derecho",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -579,7 +579,7 @@
         "nombre": "ARTICULO ACADEMICO EN 5 PASOS CLAVES",
         "categoria": "Investigación",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -587,7 +587,7 @@
         "nombre": "PROYECTOS DE EMPRENDIMIENTO PRODUCTIVO INNOVADOR",
         "categoria": "Administración",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     },
@@ -603,7 +603,7 @@
         "nombre": "CONDUCTA SUICIDA: AUTOLESION, CUTTING, PREVENCION",
         "categoria": "Psicología",
         "tipo": "Curso",
-        "costo_oficial_bs": 150.0,
+        "costo_oficial_bs": 100.0,
         "descripcion": "",
         "imagen_url": ""
     }

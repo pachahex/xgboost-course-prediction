@@ -1,33 +1,22 @@
 import os
-import random
 import datetime
 import bcrypt
 import pandas as pd
-from faker import Faker
+import json
 from sqlalchemy import create_engine, text
 
 """
 IMPORT SCRIPT (Flujo Completo: Seed -> Ingest)
 Este script unifica la carga de datos del proyecto:
-1. SEED: Crea el Administrador, Facilitador y pobla el catálogo de Programas reales.
-2. INGEST: Genera automáticamente ~3000 inscripciones históricas lógicas y las
-   ingresa a la base de datos y exporta un dataset.csv para revisión manual.
+1. SEED: Crea el Administrador, Facilitador y pobla el catálogo de Programas reales y sus Cohortes determinísticas.
+2. INGEST: Carga estudiantes históricos y sus inscripciones desde el dataset.csv.
 """
-
-# Inicializamos Faker para nombres latinos
-fake = Faker('es_MX')
 
 # Configuración de base de datos
 DB_URL = os.getenv("DATABASE_URL", "postgresql://admin:password123@localhost:5433/autopoiesis_db")
 
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-def get_random_date(start, end):
-    delta = end - start
-    int_delta = (delta.days * 24 * 60 * 60) + delta.seconds
-    random_second = random.randrange(int_delta)
-    return start + datetime.timedelta(seconds=random_second)
 
 def run_import():
     print(f"Conectando a {DB_URL} para Importación...")
@@ -58,21 +47,11 @@ def run_import():
             estado_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM estados_inscripcion"))}
             origen_map = {row[1]: row[0] for row in conn.execute(text("SELECT id, nombre FROM origenes_captacion"))}
             
-            # Helper reverse maps for CSV
-            rev_prog_map = {}
-            rev_est_map = {v: k for k, v in estado_map.items()}
-            rev_orig_map = {v: k for k, v in origen_map.items()}
-            rev_dep_map = {v: k for k, v in dep_map.items()}
-            
-            print("Poblando Programas Reales (Generando Cohortes Temporales)...")
-            import json
+            print("Poblando Programas Reales...")
             PROGRAMAS_JSON_PATH = os.path.join(os.path.dirname(__file__), 'data', 'seed_programas.json')
             
             with open(PROGRAMAS_JSON_PATH, 'r', encoding='utf-8') as f:
                 programas_raw = json.load(f)
-            
-            start_date_range = datetime.datetime(2023, 10, 1)
-            end_date_range = datetime.datetime(2026, 4, 30)
             
             for prog in programas_raw:
                 conn.execute(text("""
@@ -90,32 +69,38 @@ def run_import():
                     "img": prog.get("imagen_url") or None
                 })
                 
-                # Fetch program ID
-                prog_id = conn.execute(text("SELECT id FROM programas WHERE nombre = :n"), {"n": prog["nombre"]}).scalar()
-                
-                num_editions = random.randint(3, 6)
-                for i in range(num_editions):
-                    fecha_inicio = get_random_date(start_date_range, end_date_range).date()
-                    fecha_fin = fecha_inicio + datetime.timedelta(days=random.randint(30, 90))
-                    
-                    mes_nombre = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"][fecha_inicio.month - 1]
-                    nombre_cohorte = f"Edición {mes_nombre} {fecha_inicio.year}"
-                    
-                    conn.execute(text("""
-                        INSERT INTO cohortes (programa_id, nombre, fecha_inicio, fecha_fin, activo)
-                        VALUES (:pid, :n, :fi, :ff, false)
-                    """), {
-                        "pid": prog_id,
-                        "n": nombre_cohorte,
-                        "fi": fecha_inicio,
-                        "ff": fecha_fin
-                    })
+            print("Poblando Cohortes Determinísticas...")
+            COHORTES_JSON_PATH = os.path.join(os.path.dirname(__file__), 'data', 'seed_cohortes.json')
             
-            cohortes_info = [{"id": row[0], "pid": row[1], "prog_nombre": row[2], "tipo": row[3], "costo": float(row[4]), "fecha_inicio": row[5]} 
+            with open(COHORTES_JSON_PATH, 'r', encoding='utf-8') as f:
+                cohortes_raw = json.load(f)
+                
+            for cohorte in cohortes_raw:
+                prog_id = conn.execute(text("SELECT id FROM programas WHERE nombre = :n"), {"n": cohorte["programa_nombre"]}).scalar()
+                if not prog_id:
+                    continue
+                    
+                conn.execute(text("""
+                    INSERT INTO cohortes (programa_id, nombre, fecha_inicio, fecha_fin, activo)
+                    VALUES (:pid, :n, :fi, :ff, false)
+                """), {
+                    "pid": prog_id,
+                    "n": cohorte["nombre"],
+                    "fi": cohorte["fecha_inicio"],
+                    "ff": cohorte["fecha_fin"]
+                })
+            
+            cohortes_info = [{"id": row[0], "pid": row[1], "prog_nombre": row[2], "nombre": row[3]} 
                               for row in conn.execute(text("""
-                                SELECT c.id, p.id, p.nombre, p.tipo_servicio_id, p.costo_oficial_bs, c.fecha_inicio 
+                                SELECT c.id, p.id, p.nombre, c.nombre
                                 FROM cohortes c JOIN programas p ON c.programa_id = p.id
                               """)).fetchall()]
+            
+            # Crear índice rápido para buscar cohorte por (programa, nombre_cohorte)
+            cohortes_map = {}
+            for c in cohortes_info:
+                key = f"{c['prog_nombre']}||{c['nombre']}"
+                cohortes_map[key] = c["id"]
             
             # ==============================================================================
             # FASE 2: INGEST (Consumo de Semilla de Estudiantes JSON)
@@ -156,19 +141,12 @@ def run_import():
             db_estudiantes = {str(row[1]): row[0] for row in conn.execute(text("SELECT id, ci FROM usuarios WHERE correo LIKE '%@historico.local'")).fetchall()}
             
             # ==============================================================================
-            # FASE 3: INGEST (Consumo de Inscripciones CSV)
+            # FASE 3: INGEST (Consumo de Inscripciones CSV Determinístico)
             # ==============================================================================
             CSV_PATH = os.path.join(os.path.dirname(__file__), 'data', 'dataset.csv')
             print(f"3. Cargando inscripciones desde {CSV_PATH}...")
             df = pd.read_csv(CSV_PATH)
             
-            # Organizar cohortes por programa para búsqueda rápida
-            cohortes_por_programa = {}
-            for c in cohortes_info:
-                if c["prog_nombre"] not in cohortes_por_programa:
-                    cohortes_por_programa[c["prog_nombre"]] = []
-                cohortes_por_programa[c["prog_nombre"]].append(c)
-                
             inscripciones_batch = []
             
             for _, row in df.iterrows():
@@ -177,15 +155,14 @@ def run_import():
                     continue
                 
                 uid = db_estudiantes[ci]
-                prog_nom = row['Programa_Cohorte']
+                prog_nom = row['Programa']
+                cohorte_nom = row['Cohorte']
                 
-                # Si el programa no existe en las cohortes actuales (por alguna razón), saltar
-                if prog_nom not in cohortes_por_programa or not cohortes_por_programa[prog_nom]:
+                key = f"{prog_nom}||{cohorte_nom}"
+                if key not in cohortes_map:
                     continue
                     
-                # Elegimos una cohorte al azar del programa para la inscripción histórica
-                cohorte = random.choice(cohortes_por_programa[prog_nom])
-                cid = cohorte["id"]
+                cid = cohortes_map[key]
                 
                 fecha_inscripcion = row['Fecha_Inscripcion']
                 costo = row['Costo_Pagado_Bs']
@@ -206,9 +183,9 @@ def run_import():
             
             unique_insc = {}
             for ins in inscripciones_batch:
-                key = (ins["uid"], ins["cid"])
-                if key not in unique_insc:
-                    unique_insc[key] = ins
+                k = (ins["uid"], ins["cid"])
+                if k not in unique_insc:
+                    unique_insc[k] = ins
             
             db_insc_batch = list(unique_insc.values())
             
@@ -219,7 +196,7 @@ def run_import():
                     VALUES (:uid, :cid, :eid, :oid, :f, :c)
                 """), db_insc_batch)
 
-    print("\n✅ Proceso de Importación finalizado con éxito (Modo Cargador).")
+    print("\n✅ Proceso de Importación finalizado con éxito (Modo Cargador Determinístico).")
     print("Administrador: juandiegomc.sis@gmail.com / admin123")
 
 if __name__ == "__main__":

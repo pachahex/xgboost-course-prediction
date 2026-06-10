@@ -2,123 +2,106 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 import shap
-import json
+import joblib
 import os
-import math
-from datetime import datetime
-from sqlalchemy import text
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from db import get_db_connection
-
-def main():
-    print("Iniciando Pipeline de Machine Learning (Fase 4)...")
+def train():
+    # 1. Configuración de Rutas
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    dataset_path = os.path.join(base_dir, 'data', 'cohortes_dataset.csv')
+    model_export_path = os.path.join(base_dir, 'ml', 'xgboost_model.pkl')
+    shap_plot_path = os.path.join(base_dir, 'ml', 'shap_summary.png')
     
-    with get_db_connection() as conn:
-        print("1. Extrayendo features desde PostgreSQL (Inscripciones históricas)...")
-        df = pd.read_sql("""
-            SELECT i.id, p.id as programa_id, p.nombre as programa_nombre, 
-                   i.fecha_inscripcion, 
-                   COALESCE(EXTRACT(YEAR FROM AGE(i.fecha_inscripcion, u.fecha_nacimiento)), 25)::int as edad_estudiante
-            FROM inscripciones i
-            JOIN cohortes c ON i.cohorte_id = c.id
-            JOIN programas p ON c.programa_id = p.id
-            JOIN usuarios u ON i.usuario_id = u.id
-        """, conn)
+    print("--------------------------------------------------")
+    print("Iniciando Fase de Entrenamiento: XGBoost + SHAP")
+    print("--------------------------------------------------")
 
-    if df.empty:
-        print("No hay datos para entrenar.")
+    # 2. Carga de Datos
+    print("Cargando dataset preprocesado...")
+    if not os.path.exists(dataset_path):
+        print(f"Error: No se encontró el dataset en {dataset_path}")
         return
 
-    # Convertir a datetime
-    df['fecha_inscripcion'] = pd.to_datetime(df['fecha_inscripcion'])
-    df['anio'] = df['fecha_inscripcion'].dt.isocalendar().year
-    df['semana_del_anio'] = df['fecha_inscripcion'].dt.isocalendar().week
-
-    # 1. Feature Engineering: Agrupación SEMANAL por programa
-    print("2. Agrupando datos y creando Features Temporales...")
-    grouped = df.groupby(['programa_id', 'programa_nombre', 'anio', 'semana_del_anio']).agg(
-        conteo_demanda=('id', 'count'),
-        edad_promedio=('edad_estudiante', 'mean')
-    ).reset_index()
-
-    # Features Cíclicas (Seno y Coseno de la semana) para el bosque
-    grouped['seno_semana'] = np.sin(2 * np.pi * grouped['semana_del_anio'] / 52)
-    grouped['coseno_semana'] = np.cos(2 * np.pi * grouped['semana_del_anio'] / 52)
-
-    # 2. Persistencia en el Data Warehouse (caracteristicas_demanda_semanal)
-    with get_db_connection() as conn:
-        with conn.begin():
-            print("Guardando características agrupadas en la DB...")
-            # Limpiamos antes para este batch simplificado
-            conn.execute(text("TRUNCATE caracteristicas_demanda_semanal CASCADE"))
-            for _, row in grouped.iterrows():
-                conn.execute(text("""
-                    INSERT INTO caracteristicas_demanda_semanal 
-                    (programa_id, anio, semana_del_anio, conteo_demanda, edad_promedio, seno_semana, coseno_semana)
-                    VALUES (:pid, :a, :sa, :c, :ed, :sen, :cos)
-                """), {
-                    "pid": row['programa_id'], "a": row['anio'], "sa": row['semana_del_anio'],
-                    "c": row['conteo_demanda'], "ed": row['edad_promedio'] if pd.notna(row['edad_promedio']) else 0,
-                    "sen": row['seno_semana'], "cos": row['coseno_semana']
-                })
+    df = pd.read_csv(dataset_path)
     
-    # 3. Entrenamiento (XGBoost Regressor)
-    print("3. Ajustando XGBoostRegressor...")
-    features = ['semana_del_anio', 'edad_promedio', 'seno_semana', 'coseno_semana']
-    target = 'conteo_demanda'
-    
-    # Para simplificar el prototipo, entrenaremos un modelo global. En un caso real 
-    # se podría entrenar un modelo por Programa o meter programa_id como variable categórica.
-    # Aquí introducimos programa_id para que el modelo identifique diferencias de volumen.
-    features_full = ['programa_id'] + features
+    # 3. Preparación de X e y (Evitando Data Leakage)
+    print("Separando variables dependientes e independientes...")
+    # Excluimos las columnas identificadoras (no matemáticas) y la variable objetivo
+    columnas_excluidas = ['Programa', 'Cohorte', 'Fecha_Primer_Inscrito', 'Tamano_Cohorte']
+    X = df.drop(columns=columnas_excluidas)
+    y = df['Tamano_Cohorte']
 
-    X = grouped[features_full]
-    y = grouped[target]
+    # 4. División Train-Test (80% Entrenamiento, 20% Prueba)
+    print("Dividiendo en Conjunto de Entrenamiento (80%) y Prueba (20%)...")
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    print(f"Dimensiones Train: {X_train.shape}, Test: {X_test.shape}")
 
-    model = xgb.XGBRegressor(n_estimators=150, learning_rate=0.05, max_depth=6, random_state=42)
-    model.fit(X, y)
+    # 5. Configuración Base y Ajuste de Hiperparámetros (GridSearchCV)
+    print("Iniciando búsqueda de hiperparámetros (GridSearchCV)...")
+    xgb_model = xgb.XGBRegressor(random_state=42, objective='reg:squarederror')
     
-    print("4. Modelo Ajustado con éxito. Generando SHAP values...")
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X)
-    
-    # Para persistir la explicabilidad por cada renglón predecido
-    grouped['demanda_predicha'] = model.predict(X)
-    
-    # 5. Guardar las predicciones y SHAP (Batch)
-    print("5. Serializando metadatos SHAP y subiendo predicciones...")
-    with get_db_connection() as conn:
-        with conn.begin():
-            conn.execute(text("TRUNCATE predicciones RESTART IDENTITY CASCADE"))
-            
-            # Vamos a proyectar el análisis (para el dashboard visual) sobre los datos históricos y las siguientes semanas.
-            # Convertimos valores de numpy a float estandar para JSON
-            for i, row in grouped.iterrows():
-                # Estructurar JSONB de SHAP para esta predicción puntual
-                shap_dict = {
-                    "programa_id_impact": float(shap_values[i][0]),
-                    "semana_del_anio_impact": float(shap_values[i][1]),
-                    "edad_promedio_impact": float(shap_values[i][2]),
-                    "seno_semana_impact": float(shap_values[i][3]),
-                    "coseno_semana_impact": float(shap_values[i][4]),
-                    "base_value": float(explainer.expected_value)
-                }
+    # Malla de parámetros a explorar
+    param_grid = {
+        'n_estimators': [50, 100, 150],
+        'learning_rate': [0.01, 0.05, 0.1],
+        'max_depth': [3, 5, 7],
+        'subsample': [0.8, 1.0]
+    }
 
-                conn.execute(text("""
-                    INSERT INTO predicciones (programa_id, anio_objetivo, semana_objetivo, demanda_predicha, nivel_confianza, resumen_shap)
-                    VALUES (:pid, :a, :s, :dp, :nc, :shap)
-                """), {
-                    "pid": row['programa_id'],
-                    "a": row['anio'],
-                    "s": row['semana_del_anio'],
-                    "dp": max(0, float(row['demanda_predicha'])), # Sin negativos
-                    "nc": 0.85, # Dummy Confidence placeholder
-                    "shap": json.dumps(shap_dict)
-                })
-                
-    print("✅ Pipeline Explicable (XGBoost + SHAP) Concluido. Dashboard listo para leer.")
+    grid_search = GridSearchCV(
+        estimator=xgb_model,
+        param_grid=param_grid,
+        scoring='neg_mean_absolute_error', # Buscamos minimizar el error absoluto
+        cv=5, # Validación cruzada de 5 pliegues
+        verbose=1,
+        n_jobs=-1
+    )
+
+    # Entrenar la malla
+    grid_search.fit(X_train, y_train)
+    
+    # Extraer el mejor modelo
+    best_model = grid_search.best_estimator_
+    print("\n¡Hiperparámetros óptimos encontrados!")
+    print(grid_search.best_params_)
+
+    # 6. Evaluación de Métricas en el Conjunto de Prueba
+    print("\nEvaluando el modelo con datos no vistos (Test Set)...")
+    y_pred = best_model.predict(X_test)
+
+    # Cálculo de métricas académicas
+    mae = mean_absolute_error(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
+
+    print(f"MAE (Error Absoluto Medio): {mae:.2f} alumnos.")
+    print(f"RMSE (Raíz del Error Cuadrático Medio): {rmse:.2f} alumnos.")
+    print(f"R² (Coeficiente de Determinación): {r2:.4f} ({(r2*100):.1f}% de la varianza explicada).")
+
+    # 7. Explicabilidad: SHAP Values
+    print("\nGenerando explicabilidad visual (SHAP)...")
+    explainer = shap.TreeExplainer(best_model)
+    shap_values = explainer.shap_values(X_test)
+
+    # Configuración del gráfico
+    plt.figure(figsize=(10, 6))
+    shap.summary_plot(shap_values, X_test, show=False)
+    plt.title('Impacto de las Variables en el Tamaño del Cohorte (SHAP)')
+    plt.tight_layout()
+    
+    # Guardar gráfico
+    plt.savefig(shap_plot_path, bbox_inches='tight', dpi=300)
+    plt.close()
+    print(f"Gráfico SHAP guardado en: {shap_plot_path}")
+
+    # 8. Exportación del Modelo Definitivo
+    print("\nExportando el modelo optimizado (.pkl)...")
+    joblib.dump(best_model, model_export_path)
+    print(f"¡Éxito! Modelo exportado a: {model_export_path}")
+    print("Pipeline de Machine Learning concluido satisfactoriamente.")
 
 if __name__ == "__main__":
-    main()
+    train()

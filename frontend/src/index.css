@@ -307,6 +307,12 @@ button:hover {
   display: none;
   /* Oculto en móvil por defecto */
   z-index: 1000;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+
+.dashboard-sidebar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .dashboard-sidebar.open {
@@ -363,6 +369,7 @@ button:hover {
     flex-direction: column;
     width: 260px;
     min-width: 260px;
+    flex-shrink: 0;
     height: 100%;
     position: relative;
     top: 0;

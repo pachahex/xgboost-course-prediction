@@ -20,6 +20,7 @@ const DashboardLayout = () => {
   const [isProgramasOpen, setIsProgramasOpen] = useState(true);
   const [isInscripcionesOpen, setIsInscripcionesOpen] = useState(false);
   const [isFacilitadoresOpen, setIsFacilitadoresOpen] = useState(false);
+  const [isIaOpen, setIsIaOpen] = useState(false);
 
   const getLinkStyle = (path) => ({
     display: 'flex',
@@ -245,24 +246,57 @@ const DashboardLayout = () => {
                 </button>
                 {isInscripcionesOpen && (
                   <div style={{ paddingLeft: '1.5rem', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                    <Link to="/dashboard/inscripciones/nueva" style={{ ...getLinkStyle('/dashboard/inscripciones/nueva'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
-                      <UserPlus size={16} /> Nuevo Ingreso
-                    </Link>
                     <Link to="/dashboard/estudiantes" style={{ ...getLinkStyle('/dashboard/estudiantes'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
                       <Users size={16} /> Base de Estudiantes
                     </Link>
                     <Link to="/dashboard/inscripciones" style={{ ...getLinkStyle('/dashboard/inscripciones'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
                       <List size={16} /> Registro Histórico
                     </Link>
+                    <Link to="/dashboard/inscripciones/nueva" style={{ ...getLinkStyle('/dashboard/inscripciones/nueva'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
+                      <UserPlus size={16} /> Nuevo Ingreso
+                    </Link>
                   </div>
                 )}
               </div>
-              <Link to="/dashboard/ia-predictiva" style={getLinkStyle('/dashboard/ia-predictiva')}>
-                <Brain size={18} /> IA y Demanda
-              </Link>
               <Link to="/dashboard/mailing" style={getLinkStyle('/dashboard/mailing')}>
                 <Mail size={18} /> Email Marketing
               </Link>
+              {/* Submenú IA */}
+              <div style={{ marginBottom: '0.5rem' }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsIaOpen(!isIaOpen);
+                  }}
+                  style={{
+                    ...getLinkStyle(location.pathname.startsWith('/dashboard/ia-predictiva') ? location.pathname : ''),
+                    width: '100%',
+                    border: 'none',
+                    cursor: 'pointer',
+                    justifyContent: 'space-between',
+                    backgroundColor: location.pathname.startsWith('/dashboard/ia-predictiva') ? 'rgba(255,255,255,0.05)' : 'transparent',
+                    color: location.pathname.startsWith('/dashboard/ia-predictiva') ? 'white' : '#aaa'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                    <Brain size={18} /> IA y Demanda
+                  </div>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>{isIaOpen ? '▲' : '▼'}</span>
+                </button>
+                {isIaOpen && (
+                  <div style={{ paddingLeft: '1.5rem', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <Link to="/dashboard/ia-predictiva" style={{ ...getLinkStyle('/dashboard/ia-predictiva'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
+                      <Brain size={16} /> Ranking Predictivo de Programas
+                    </Link>
+                    <Link to="/dashboard/ia-predictiva/detalle" style={{ ...getLinkStyle('/dashboard/ia-predictiva/detalle'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
+                      <Brain size={16} /> Detalle Predictivo
+                    </Link>
+                    <Link to="/dashboard/ia-predictiva/ficha-tecnica" style={{ ...getLinkStyle('/dashboard/ia-predictiva/ficha-tecnica'), padding: '0.7rem 1rem', fontSize: '0.9rem' }}>
+                      <Brain size={16} /> Ficha Técnica del Modelo
+                    </Link>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
