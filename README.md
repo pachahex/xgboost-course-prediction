@@ -87,7 +87,7 @@ Para mantener la integridad visual y lógica del proyecto, se ha establecido un 
 Para probar los distintos niveles de privilegios (RBAC) y flujos del sistema en la ruta `/login`:
 
 *   **Administrador Principal (Dashboard Completo + IA Predictiva):**
-    *   **Correo:** `juuuuands@gmail.com`
+    *   **Correo:** `juandiegomc.sis@gmail.com`
     *   **Contraseña:** `admin123`
 *   **Estudiante de Prueba (Vista de Cursos + Módulo de Inscripciones):**
     *   **Correo:** `mcj2027302@est.univalle.edu`
@@ -117,7 +117,7 @@ docker compose up -d --build
 
 ### Paso 3: Acceder como Administrador
 1. Inicia sesión en [http://localhost:3000/login](http://localhost:3000/login) con la cuenta de **Administrador**:
-   * **Usuario:** `juuuuands@gmail.com` | **Contraseña:** `admin123`
+   * **Usuario:** `juandiegomc.sis@gmail.com` | **Contraseña:** `admin123`
 2. **Resultado Esperado:** Acceso exitoso al panel completo del administrador, donde podrás visualizar la barra de navegación lateral y las estadísticas iniciales en tiempo real.
 
 ### Paso 4: Ejecutar la Ingesta de Datos (ETL)

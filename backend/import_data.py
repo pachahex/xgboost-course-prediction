@@ -197,7 +197,7 @@ def run_import():
                 """), db_insc_batch)
 
     print("\n✅ Proceso de Importación finalizado con éxito (Modo Cargador Determinístico).")
-    print("Administrador: juuuuands@gmail.com / admin123")
+    print("Administrador: juandiegomc.sis@gmail.com / admin123")
 
     # Ejecutar el pipeline predictivo automáticamente
     try:
