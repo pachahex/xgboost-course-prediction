@@ -910,51 +910,75 @@ def get_all_estudiantes():
 @admin_required
 def get_estudiantes_stats():
     """Retorna las métricas y datos demográficos agregados de los estudiantes para el Dashboard"""
+    anio = request.args.get('anio', '')
+    
     with get_db_connection() as conn:
+        where_i = ""
+        params = {}
+        join_clause = ""
+        if anio and anio != 'all':
+            where_i = "AND EXTRACT(YEAR FROM i.fecha_inscripcion) = :anio"
+            params = {"anio": int(anio)}
+            join_clause = f"JOIN (SELECT DISTINCT usuario_id FROM inscripciones i WHERE 1=1 {where_i}) as i ON i.usuario_id = u.id"
+            
+        # Obtener lista de años para el filtro (basado en inscripciones)
+        anios_res = conn.execute(text("""
+            SELECT DISTINCT EXTRACT(YEAR FROM i.fecha_inscripcion)::INT as anio
+            FROM inscripciones i
+            JOIN usuarios u ON i.usuario_id = u.id
+            JOIN roles r ON u.rol_id = r.id
+            WHERE r.nombre = 'Estudiante' AND i.fecha_inscripcion IS NOT NULL
+            ORDER BY anio DESC
+        """)).fetchall()
+        anios = [r.anio for r in anios_res]
+
         # KPI 1: Total Estudiantes
-        total_estudiantes = conn.execute(text("""
-            SELECT COUNT(*) 
+        total_estudiantes = conn.execute(text(f"""
+            SELECT COUNT(DISTINCT u.id) 
             FROM usuarios u
             JOIN roles r ON u.rol_id = r.id
+            {join_clause}
             WHERE r.nombre = 'Estudiante'
-        """)).scalar() or 0
+        """), params).scalar() or 0
 
         # KPI 2: Edad Promedio
-        avg_edad = conn.execute(text("""
+        avg_edad = conn.execute(text(f"""
             SELECT COALESCE(ROUND(AVG(EXTRACT(YEAR FROM age(CURRENT_DATE, u.fecha_nacimiento)))::NUMERIC, 1), 0.0)
             FROM usuarios u
             JOIN roles r ON u.rol_id = r.id
+            {join_clause}
             WHERE r.nombre = 'Estudiante' AND u.fecha_nacimiento IS NOT NULL
-        """)).scalar() or 0.0
+        """), params).scalar() or 0.0
 
         # KPI 3: Total Inscripciones (Volumen)
-        total_inscripciones = conn.execute(text("""
+        total_inscripciones = conn.execute(text(f"""
             SELECT COUNT(i.id)
             FROM inscripciones i
             JOIN usuarios u ON i.usuario_id = u.id
             JOIN roles r ON u.rol_id = r.id
-            WHERE r.nombre = 'Estudiante'
-        """)).scalar() or 0
+            WHERE r.nombre = 'Estudiante' {where_i}
+        """), params).scalar() or 0
 
         # KPI 4: Canal de Captación Top
-        top_canal = conn.execute(text("""
+        top_canal = conn.execute(text(f"""
             SELECT o.nombre, COUNT(i.id) as total
             FROM inscripciones i
             JOIN origenes_captacion o ON i.origen_id = o.id
+            WHERE 1=1 {where_i}
             GROUP BY o.nombre
             ORDER BY total DESC
             LIMIT 1
-        """)).fetchone()
+        """), params).fetchone()
         top_canal_nombre = top_canal[0] if top_canal else "Ninguno"
 
         # KPI 5: Tasa de Retención / Fidelidad (% alumnos con >= 2 cursos)
-        tasa_fidelidad = conn.execute(text("""
+        tasa_fidelidad = conn.execute(text(f"""
             WITH insc_por_usuario AS (
                 SELECT usuario_id, COUNT(i.id) as total_insc
                 FROM inscripciones i
                 JOIN usuarios u ON i.usuario_id = u.id
                 JOIN roles r ON u.rol_id = r.id
-                WHERE r.nombre = 'Estudiante'
+                WHERE r.nombre = 'Estudiante' {where_i}
                 GROUP BY usuario_id
             )
             SELECT 
@@ -966,10 +990,10 @@ def get_estudiantes_stats():
                     0.0
                 )
             FROM insc_por_usuario
-        """)).scalar() or 0.0
+        """), params).scalar() or 0.0
 
         # KPI 6: Tasa de Finalización / Graduación (Finalizados / Finalizados + Retirados)
-        tasa_finalizacion = conn.execute(text("""
+        tasa_finalizacion = conn.execute(text(f"""
             SELECT 
                 COALESCE(
                     ROUND(
@@ -981,36 +1005,39 @@ def get_estudiantes_stats():
                 )
             FROM inscripciones i
             JOIN estados_inscripcion e ON i.estado_id = e.id
-        """)).scalar() or 0.0
+            WHERE 1=1 {where_i}
+        """), params).scalar() or 0.0
 
         # Gráfico 1: Canales de Captación (Origen de Matrículas)
-        res_origenes = conn.execute(text("""
+        res_origenes = conn.execute(text(f"""
             SELECT o.nombre, COUNT(i.id) as total
             FROM inscripciones i
             JOIN origenes_captacion o ON i.origen_id = o.id
+            WHERE 1=1 {where_i}
             GROUP BY o.nombre
             ORDER BY total DESC
-        """)).fetchall()
+        """), params).fetchall()
         chart_origenes = [{"name": r.nombre, "value": int(r.total)} for r in res_origenes]
 
         # Gráfico 2: Progreso Académico (Distribución por Estados de Inscripción)
-        res_progreso = conn.execute(text("""
+        res_progreso = conn.execute(text(f"""
             SELECT e.nombre, COUNT(i.id) as total
             FROM inscripciones i
             JOIN estados_inscripcion e ON i.estado_id = e.id
+            WHERE 1=1 {where_i}
             GROUP BY e.nombre
             ORDER BY total DESC
-        """)).fetchall()
+        """), params).fetchall()
         chart_progreso = [{"name": r.nombre, "value": int(r.total)} for r in res_progreso]
 
         # Gráfico 3: Frecuencia de Compra / Fidelidad (1 curso, 2 cursos, 3+)
-        res_fidelidad = conn.execute(text("""
+        res_fidelidad = conn.execute(text(f"""
             WITH insc_por_usuario AS (
                 SELECT usuario_id, COUNT(i.id) as total_insc
                 FROM inscripciones i
                 JOIN usuarios u ON i.usuario_id = u.id
                 JOIN roles r ON u.rol_id = r.id
-                WHERE r.nombre = 'Estudiante'
+                WHERE r.nombre = 'Estudiante' {where_i}
                 GROUP BY usuario_id
             )
             SELECT 
@@ -1022,7 +1049,7 @@ def get_estudiantes_stats():
                 COUNT(*) as total
             FROM insc_por_usuario
             GROUP BY grupo
-        """)).fetchall()
+        """), params).fetchall()
         
         grupo_order = {'1 Inscripción': 1, '2 Inscripciones': 2, '3 o más Inscripciones': 3}
         chart_fidelidad = sorted(
@@ -1031,6 +1058,7 @@ def get_estudiantes_stats():
         )
 
     return jsonify({
+        "anios": anios,
         "kpis": {
             "total_estudiantes": total_estudiantes,
             "avg_edad": float(avg_edad),

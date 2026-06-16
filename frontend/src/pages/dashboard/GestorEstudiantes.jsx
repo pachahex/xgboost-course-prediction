@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { fetchApi } from '../../api';
 import { 
   Users, Search, PlusCircle, Save, CheckCircle, ArrowLeft,
-  Calendar, Award, BookOpen, TrendingUp, Map
+  Calendar, Award, BookOpen, TrendingUp, Map, Filter
 } from 'lucide-react';
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
-  ResponsiveContainer, PieChart, Pie, Cell, Legend, RadialBarChart, RadialBar
+  ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 
 const COLORS = ['#038fba', '#e74c3c', '#2ecc71', '#e67e22', '#9b59b6', '#34495e'];
@@ -55,6 +55,7 @@ const GestorEstudiantes = () => {
   
   // Stats Dashboard State
   const [statsTab, setStatsTab] = useState('catalogo'); // 'catalogo' or 'dashboard'
+  const [statsYear, setStatsYear] = useState('all');
   const [statsData, setStatsData] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState('');
@@ -94,11 +95,12 @@ const GestorEstudiantes = () => {
     loadData();
   }, []);
 
-  const loadStats = async () => {
+  const loadStats = async (year) => {
     setStatsLoading(true);
     setStatsError('');
     try {
-      const res = await fetchApi('/admin/estudiantes/stats');
+      const query = year !== 'all' ? `?anio=${year}` : '';
+      const res = await fetchApi(`/admin/estudiantes/stats${query}`);
       setStatsData(res);
     } catch (err) {
       console.error(err);
@@ -111,9 +113,9 @@ const GestorEstudiantes = () => {
   // Fetch Stats dynamically
   useEffect(() => {
     if (statsTab === 'dashboard') {
-      loadStats();
+      loadStats(statsYear);
     }
-  }, [statsTab]);
+  }, [statsTab, statsYear]);
 
   // Reset page when search or selectedDept filters change
   useEffect(() => {
@@ -205,12 +207,7 @@ const GestorEstudiantes = () => {
     const kpis = statsData?.kpis || { total_estudiantes: 0, avg_edad: 0, total_inscripciones: 0, top_canal: 'Ninguno', tasa_fidelidad: 0, tasa_finalizacion: 0 };
     const chartOrigenes = statsData?.charts?.origenes || [];
     const chartProgreso = statsData?.charts?.progreso || [];
-    const chartFidelidad = statsData?.charts?.fidelidad || [];
 
-    const chartFidelidadFormatted = chartFidelidad.map((d, idx) => ({
-      ...d,
-      fill: COLORS[(idx + 2) % COLORS.length]
-    }));
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', paddingBottom: '3rem' }}>
@@ -222,7 +219,7 @@ const GestorEstudiantes = () => {
           <KpiCard title="Canal Principal" value={kpis.top_canal} icon={Award} color="#9b59b6" />
         </div>
 
-        {/* Fila 1: Canales de Captación y Nivel de Retención */}
+        {/* Fila de Gráficos: Canales de Captación y Estado de Cursado */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '1.5rem' }}>
           
           {/* Canales de Captación */}
@@ -257,50 +254,7 @@ const GestorEstudiantes = () => {
             )}
           </div>
 
-          {/* Fidelización de Estudiantes (Radial Bar Chart) */}
-          <div className="glass-panel" style={{ padding: '1.5rem', backgroundColor: 'var(--panel-bg)', border: '1px solid var(--glass-border)', borderRadius: '12px' }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Award size={18} color="var(--color-accent)" /> Retención de Estudiantes (Inscripciones por Alumno)
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-              Proporción de estudiantes que cursan un programa único vs. estudiantes recurrentes (leales).
-            </p>
-            {chartFidelidad.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <RadialBarChart 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius="30%" 
-                  outerRadius="90%" 
-                  barSize={18} 
-                  data={chartFidelidadFormatted}
-                >
-                  <RadialBar
-                    minAngle={15}
-                    background
-                    clockWise
-                    dataKey="value"
-                  />
-                  <Legend 
-                    iconSize={8} 
-                    layout="vertical" 
-                    verticalAlign="middle" 
-                    align="right" 
-                    wrapperStyle={{ fontSize: '11px', color: 'var(--text-main)' }} 
-                  />
-                  <RechartsTooltip contentStyle={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--glass-border)', color: 'var(--text-main)' }} />
-                </RadialBarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ height: '260px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Sin datos de fidelización.</div>
-            )}
-          </div>
-
-        </div>
-
-        {/* Fila 2: Progreso Académico y Conclusión de Cursos */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          
+          {/* Estado de Cursado e Inscripciones (Eficiencia Académica) */}
           <div className="glass-panel" style={{ padding: '1.5rem', backgroundColor: 'var(--panel-bg)', border: '1px solid var(--glass-border)', borderRadius: '12px' }}>
             <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <TrendingUp size={18} color="var(--color-accent)" /> Estado de Cursado e Inscripciones (Eficiencia Académica)
@@ -407,42 +361,61 @@ const GestorEstudiantes = () => {
           gap: '1rem',
           borderBottom: '1px solid var(--glass-border)',
           marginBottom: '2rem',
-          paddingBottom: '0.5rem'
+          paddingBottom: '0.5rem',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          <button
-            onClick={() => setStatsTab('catalogo')}
-            style={{
-              padding: '0.6rem 1.2rem',
-              borderRadius: '6px 6px 0 0',
-              border: 'none',
-              borderBottom: statsTab === 'catalogo' ? '3px solid var(--color-accent)' : '3px solid transparent',
-              backgroundColor: 'transparent',
-              color: statsTab === 'catalogo' ? 'var(--color-primary-dark)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              transition: 'all 0.2s',
-              fontSize: '0.95rem'
-            }}
-          >
-            Catálogo de Estudiantes
-          </button>
-          <button
-            onClick={() => setStatsTab('dashboard')}
-            style={{
-              padding: '0.6rem 1.2rem',
-              borderRadius: '6px 6px 0 0',
-              border: 'none',
-              borderBottom: statsTab === 'dashboard' ? '3px solid var(--color-accent)' : '3px solid transparent',
-              backgroundColor: 'transparent',
-              color: statsTab === 'dashboard' ? 'var(--color-primary-dark)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              transition: 'all 0.2s',
-              fontSize: '0.95rem'
-            }}
-          >
-            Estadísticas Demográficas
-          </button>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              onClick={() => setStatsTab('catalogo')}
+              style={{
+                padding: '0.6rem 1.2rem',
+                borderRadius: '6px 6px 0 0',
+                border: 'none',
+                borderBottom: statsTab === 'catalogo' ? '3px solid var(--color-accent)' : '3px solid transparent',
+                backgroundColor: 'transparent',
+                color: statsTab === 'catalogo' ? 'var(--color-primary-dark)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                transition: 'all 0.2s',
+                fontSize: '0.95rem'
+              }}
+            >
+              Catálogo de Estudiantes
+            </button>
+            <button
+              onClick={() => setStatsTab('dashboard')}
+              style={{
+                padding: '0.6rem 1.2rem',
+                borderRadius: '6px 6px 0 0',
+                border: 'none',
+                borderBottom: statsTab === 'dashboard' ? '3px solid var(--color-accent)' : '3px solid transparent',
+                backgroundColor: 'transparent',
+                color: statsTab === 'dashboard' ? 'var(--color-primary-dark)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                transition: 'all 0.2s',
+                fontSize: '0.95rem'
+              }}
+            >
+              Estadísticas Demográficas
+            </button>
+          </div>
+          {statsTab === 'dashboard' && statsData?.anios && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Filter size={16} style={{ color: 'var(--text-muted)' }} />
+              <select
+                value={statsYear}
+                onChange={(e) => setStatsYear(e.target.value)}
+                style={{ ...inputStyle, width: 'auto', minWidth: '130px', padding: '0.5rem', fontSize: '0.85rem' }}
+              >
+                <option value="all">Todos los Años</option>
+                {statsData.anios.map(yr => (
+                  <option key={yr} value={yr}>{yr}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       )}
 

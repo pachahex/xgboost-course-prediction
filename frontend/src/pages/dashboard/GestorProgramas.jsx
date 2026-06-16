@@ -3,7 +3,7 @@ import { fetchApi } from '../../api';
 import { 
   PlusCircle, Pencil, Save, XCircle, Trash2, CheckCircle, Eye, EyeOff, 
   LayoutGrid, List, Search, Filter, ArrowLeft, BarChart2, Users, Calendar, 
-  TrendingUp, DollarSign, Map, Award, Check, Star
+  TrendingUp, DollarSign, Map, Award, Check, Star, Copy
 } from 'lucide-react';
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
@@ -266,6 +266,31 @@ const GestorProgramas = () => {
     });
     setImagen(null);
     setStatus('Modo edición activado.');
+  };
+
+  const startDuplicate = (p) => {
+    setEditId(null); // Al ser null, se creará un registro nuevo
+    setView('form'); // Cambiar a la vista de formulario
+    const cat = categorias.find(c => c.nombre === p.categoria)?.id || '';
+    const tip = tipos.find(t => t.nombre === p.tipo)?.id || '';
+    const mod = modalidades.find(m => m.nombre === p.modalidad)?.id || '';
+
+    setFormData({
+      nombre: p.nombre + ' (Nueva Edición)',
+      costo: p.costo,
+      categoria_id: cat,
+      tipo_servicio_id: tip,
+      modalidad_id: mod,
+      duracion_horas: p.duracion_horas || '',
+      descripcion: p.descripcion || '',
+      fecha_inicio: '',
+      fecha_fin: '',
+      activo: false, // Las copias inician inactivas por defecto
+      'beneficios[]': p.beneficios_ids || [],
+      'facilitadores[]': p.facilitadores_ids || []
+    });
+    setImagen(null);
+    setStatus('Modo creación activado (Usando lienzo de programa existente).');
   };
 
   const cancelEdit = () => {
@@ -1389,29 +1414,57 @@ const GestorProgramas = () => {
                           <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-main)', flexGrow: 1 }}>{p.nombre}</h4>
                           <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '1rem' }}>{p.costo} Bs.</div>
                           
-                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                            <button
-                              onClick={() => {
-                                startEdit(p);
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }}
-                              style={{
-                                padding: '6px 12px',
-                                fontSize: '0.75rem',
-                                backgroundColor: 'var(--color-primary-dark)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                flex: 1,
-                                justifyContent: 'center'
-                              }}
-                            >
-                              <Pencil size={12} /> Editar
-                            </button>
+                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto', flexWrap: 'wrap' }}>
+                            {p.activo && (
+                              <button
+                                onClick={() => {
+                                  startEdit(p);
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '0.75rem',
+                                  backgroundColor: 'var(--color-primary-dark)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  flex: 1,
+                                  justifyContent: 'center'
+                                }}
+                                title="Corregir Errores"
+                              >
+                                <Pencil size={12} /> Editar
+                              </button>
+                            )}
+                            {!p.activo && (
+                              <button
+                                onClick={() => {
+                                  startDuplicate(p);
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '0.75rem',
+                                  backgroundColor: 'var(--color-accent)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  flex: 1,
+                                  justifyContent: 'center'
+                                }}
+                                title="Lanzar Nueva Versión"
+                              >
+                                <Copy size={12} /> Duplicar
+                              </button>
+                            )}
                             {p.activo && (
                               <button
                                 onClick={() => handleCerrarPrograma(p)}
@@ -1426,7 +1479,8 @@ const GestorProgramas = () => {
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  justifyContent: 'center'
+                                  justifyContent: 'center',
+                                  flex: '1 1 100%'
                                 }}
                                 title="Finalizar Cohorte"
                               >
@@ -1483,13 +1537,24 @@ const GestorProgramas = () => {
                                 >
                                   <Star size={16} fill={markedProgramId === String(p.id) ? "white" : "none"} />
                                 </button>
-                                <button
-                                  onClick={() => startEdit(p)}
-                                  style={{ padding: '0.5rem', borderRadius: '6px', border: 'none', backgroundColor: 'var(--bg-page)', cursor: 'pointer', color: 'var(--color-primary-dark)' }}
-                                  title="Editar"
-                                >
-                                  <Pencil size={16} />
-                                </button>
+                                {p.activo && (
+                                  <button
+                                    onClick={() => startEdit(p)}
+                                    style={{ padding: '0.5rem', borderRadius: '6px', border: 'none', backgroundColor: 'var(--bg-page)', cursor: 'pointer', color: 'var(--color-primary-dark)' }}
+                                    title="Corregir Errores"
+                                  >
+                                    <Pencil size={16} />
+                                  </button>
+                                )}
+                                {!p.activo && (
+                                  <button
+                                    onClick={() => startDuplicate(p)}
+                                    style={{ padding: '0.5rem', borderRadius: '6px', border: 'none', backgroundColor: 'rgba(3, 143, 186, 0.1)', cursor: 'pointer', color: 'var(--color-accent)' }}
+                                    title="Lanzar Nueva Versión (Duplicar)"
+                                  >
+                                    <Copy size={16} />
+                                  </button>
+                                )}
                                 {p.activo && (
                                   <button
                                     onClick={() => handleCerrarPrograma(p)}

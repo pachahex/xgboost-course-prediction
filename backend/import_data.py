@@ -197,7 +197,16 @@ def run_import():
                 """), db_insc_batch)
 
     print("\n✅ Proceso de Importación finalizado con éxito (Modo Cargador Determinístico).")
-    print("Administrador: juandiegomc.sis@gmail.com / admin123")
+    print("Administrador: juuuuands@gmail.com / admin123")
+
+    # Ejecutar el pipeline predictivo automáticamente
+    try:
+        print("\n🧠 Ejecutando pipeline de IA predictiva (Generando predicciones y explicabilidad)...")
+        from ml.train_model import train
+        train()
+        print("✅ Base de datos poblada al 100% con inferencias de IA. Proyecto listo para revisión.")
+    except Exception as e:
+        print(f"⚠️ Atención: No se pudo completar el pipeline predictivo automáticamente: {e}")
 
 if __name__ == "__main__":
     run_import()
