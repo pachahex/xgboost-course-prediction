@@ -199,14 +199,18 @@ def run_import():
     print("\n✅ Proceso de Importación finalizado con éxito (Modo Cargador Determinístico).")
     print("Administrador: juandiegomc.sis@gmail.com / admin123")
 
-    # Ejecutar el pipeline predictivo automáticamente
-    try:
-        print("\n🧠 Ejecutando pipeline de IA predictiva (Generando predicciones y explicabilidad)...")
-        from ml.train_model import train
-        train()
-        print("✅ Base de datos poblada al 100% con inferencias de IA. Proyecto listo para revisión.")
-    except Exception as e:
-        print(f"⚠️ Atención: No se pudo completar el pipeline predictivo automáticamente: {e}")
+    # Usar el modelo entrenado existente si existe
+    model_path = os.path.join(os.path.dirname(__file__), 'ml', 'xgboost_model.pkl')
+    if os.path.exists(model_path):
+        print("\n✅ Se detectó un modelo pre-entrenado xgboost_model.pkl. Se consumirá directamente sin re-entrenar.")
+    else:
+        try:
+            print("\n🧠 No se detectó modelo pre-entrenado. Ejecutando pipeline de IA predictiva...")
+            from ml.train_model import train
+            train()
+            print("✅ Base de datos poblada al 100% con inferencias de IA. Proyecto listo para revisión.")
+        except Exception as e:
+            print(f"⚠️ Atención: No se pudo completar el pipeline predictivo automáticamente: {e}")
 
 if __name__ == "__main__":
     run_import()

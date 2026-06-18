@@ -276,7 +276,7 @@ const GestorProgramas = () => {
     const mod = modalidades.find(m => m.nombre === p.modalidad)?.id || '';
 
     setFormData({
-      nombre: p.nombre + ' (Nueva Edición)',
+      nombre: p.nombre,
       costo: p.costo,
       categoria_id: cat,
       tipo_servicio_id: tip,
@@ -468,8 +468,20 @@ const GestorProgramas = () => {
 
   // Filter Logic memoized with useMemo
   const filteredProgramas = useMemo(() => {
-    return programas.filter(p => {
-      const matchesSearch = p.nombre.toLowerCase().includes(filters.search.toLowerCase());
+    // 1. Group by name and keep only the latest edition (highest id)
+    const groupedObj = (programas || []).reduce((acc, p) => {
+      const nameKey = p.nombre || 'Sin Nombre';
+      if (!acc[nameKey] || p.id > acc[nameKey].id) {
+        acc[nameKey] = p;
+      }
+      return acc;
+    }, {});
+    const uniqueProgramas = Object.values(groupedObj);
+
+    // 2. Apply filters to the unique list
+    return uniqueProgramas.filter(p => {
+      const nombreSafe = p.nombre || '';
+      const matchesSearch = nombreSafe.toLowerCase().includes((filters.search || '').toLowerCase());
       const matchesCat = filters.categoria === '' || p.categoria === filters.categoria;
       const matchesTipo = filters.tipo === '' || p.tipo === filters.tipo;
       const matchesMod = filters.modalidad === '' || p.modalidad === filters.modalidad;
@@ -1462,7 +1474,7 @@ const GestorProgramas = () => {
                                 }}
                                 title="Lanzar Nueva Versión"
                               >
-                                <Copy size={12} /> Duplicar
+                                <Copy size={12} /> Clonar
                               </button>
                             )}
                             {p.activo && (
@@ -1550,7 +1562,7 @@ const GestorProgramas = () => {
                                   <button
                                     onClick={() => startDuplicate(p)}
                                     style={{ padding: '0.5rem', borderRadius: '6px', border: 'none', backgroundColor: 'rgba(3, 143, 186, 0.1)', cursor: 'pointer', color: 'var(--color-accent)' }}
-                                    title="Lanzar Nueva Versión (Duplicar)"
+                                    title="Lanzar Nueva Versión (Clonar)"
                                   >
                                     <Copy size={16} />
                                   </button>

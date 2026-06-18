@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchApi } from '../../api';
-import { Award, BookOpen, Calendar, Clock, Filter, Search, Users, Activity, BarChart2 } from 'lucide-react';
+import { Award, BookOpen, Calendar, Clock, Filter, Search, Users, Activity, BarChart2, ChevronDown, Check, X } from 'lucide-react';
 
 // Calcular progreso temporal de la cohorte
 const getCohortProgress = (startStr, endStr) => {
@@ -55,6 +55,22 @@ const Inscripciones = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
+  // Search & Combobox Dropdown States
+  const [cohortSearch, setCohortSearch] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Click outside to close custom dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     fetchApi('/admin/cohortes/all')
       .then(res => setCohortes(res))
@@ -90,11 +106,20 @@ const Inscripciones = () => {
   // Filtrar las cohortes para el selector y el sumario superior
   const visibleCohortes = useMemo(() => {
     return cohortes.filter(c => {
-      if (cohortesFilter === 'active') return c.activo;
-      if (cohortesFilter === 'closed') return !c.activo;
+      // Estado (Activas / Cerradas)
+      const matchesStatus = cohortesFilter === 'active' ? c.activo : !c.activo;
+      if (!matchesStatus) return false;
+
+      // Buscador por nombre de programa o cohorte
+      if (cohortSearch.trim() !== '') {
+        const query = cohortSearch.toLowerCase();
+        const matchesProgram = (c.programa_nombre || c.programa || '').toLowerCase().includes(query);
+        const matchesCohort = (c.cohorte_nombre || c.nombre || '').toLowerCase().includes(query);
+        return matchesProgram || matchesCohort;
+      }
       return true;
     });
-  }, [cohortes, cohortesFilter]);
+  }, [cohortes, cohortesFilter, cohortSearch]);
 
   const activeCohortes = useMemo(() => {
     return cohortes.filter(c => c.activo);
@@ -235,48 +260,219 @@ const Inscripciones = () => {
           
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             
-            {/* Filtro de Estado de Cohorte */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Filter size={16} style={{ color: 'var(--text-muted)' }} />
-              <select 
-                value={cohortesFilter} 
-                onChange={(e) => { setCohortesFilter(e.target.value); setSelectedCohorte(''); setPage(1); }}
+            {/* Filtro de Estado de Cohorte: Segmented Control */}
+            <div style={{ 
+              display: 'flex', 
+              backgroundColor: 'var(--bg-page)', 
+              borderRadius: '8px', 
+              padding: '2px', 
+              border: '1px solid var(--glass-border)' 
+            }}>
+              <button
+                type="button"
+                onClick={() => { setCohortesFilter('active'); setSelectedCohorte(''); setPage(1); setCohortSearch(''); }}
                 style={{
-                  padding: '0.6rem 1rem',
+                  padding: '0.5rem 1rem',
                   borderRadius: '6px',
-                  border: '1px solid var(--glass-border)',
-                  backgroundColor: 'var(--bg-page)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.9rem'
+                  border: 'none',
+                  backgroundColor: cohortesFilter === 'active' ? 'var(--color-primary)' : 'transparent',
+                  color: cohortesFilter === 'active' ? '#ffffff' : 'var(--text-muted)',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.25s ease'
                 }}
               >
-                <option value="active">Cohortes Activas</option>
-                <option value="closed">Cohortes Cerradas</option>
-              </select>
+                Activas
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCohortesFilter('closed'); setSelectedCohorte(''); setPage(1); setCohortSearch(''); }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: cohortesFilter === 'closed' ? 'var(--color-primary)' : 'transparent',
+                  color: cohortesFilter === 'closed' ? '#ffffff' : 'var(--text-muted)',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.25s ease'
+                }}
+              >
+                Cerradas
+              </button>
             </div>
 
-            {/* Selector de Cohorte específica */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <select 
-                value={selectedCohorte} 
-                onChange={(e) => { setSelectedCohorte(e.target.value); setPage(1); }}
+            {/* Custom Combobox Dropdown */}
+            <div ref={dropdownRef} style={{ position: 'relative', minWidth: '600px' }}>
+              <div 
+                onClick={() => setDropdownOpen(!dropdownOpen)}
                 style={{
                   padding: '0.6rem 1rem',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid var(--glass-border)',
                   backgroundColor: 'var(--bg-page)',
                   color: 'var(--text-main)',
-                  minWidth: '220px',
-                  fontSize: '0.9rem'
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  minHeight: '40px',
+                  userSelect: 'none',
+                  transition: 'border-color 0.2s'
                 }}
               >
-                <option value="">Seleccionar cohorte...</option>
-                {visibleCohortes.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
+                <span style={{ 
+                  whiteSpace: 'nowrap', 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis',
+                  color: selectedCohorte ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontWeight: selectedCohorte ? '600' : 'normal'
+                }}>
+                  {selectedCohorte ? (
+                    (() => {
+                      const sel = cohortes.find(c => String(c.id) === String(selectedCohorte));
+                      return sel ? `${sel.programa_nombre || sel.programa} (${sel.cohorte_nombre || sel.nombre})` : 'Seleccionada';
+                    })()
+                  ) : (
+                    'Seleccionar Cohorte...'
+                  )}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {selectedCohorte && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCohorte('');
+                        setPage(1);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '2px',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                  <ChevronDown size={16} style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: 'var(--text-muted)' }} />
+                </div>
+              </div>
+
+              {dropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 5px)',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'var(--panel-bg)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                  zIndex: 1000,
+                  overflow: 'hidden',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  {/* Buscador de Programas/Cohortes */}
+                  <div style={{ 
+                    padding: '8px', 
+                    borderBottom: '1px solid var(--glass-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: 'rgba(0,0,0,0.05)'
+                  }}>
+                    <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <input
+                      type="text"
+                      placeholder="Buscar por programa o cohorte..."
+                      value={cohortSearch}
+                      onChange={(e) => setCohortSearch(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: '100%',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-main)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        padding: '4px 0'
+                      }}
+                    />
+                    {cohortSearch && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCohortSearch('');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--text-muted)',
+                          padding: '2px'
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Listado */}
+                  <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                    {visibleCohortes.length === 0 ? (
+                      <div style={{ padding: '12px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                        No se encontraron cohortes.
+                      </div>
+                    ) : (
+                      visibleCohortes.map(c => {
+                        const isSelected = String(c.id) === String(selectedCohorte);
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => {
+                              setSelectedCohorte(c.id);
+                              setPage(1);
+                              setDropdownOpen(false);
+                            }}
+                            style={{
+                              padding: '10px 12px',
+                              fontSize: '0.85rem',
+                              color: isSelected ? 'var(--color-primary-dark)' : 'var(--text-main)',
+                              backgroundColor: isSelected ? 'rgba(3, 143, 186, 0.08)' : 'transparent',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              transition: 'background-color 0.15s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isSelected ? 'rgba(3, 143, 186, 0.08)' : 'transparent'}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden', marginRight: '8px' }}>
+                              <span style={{ fontWeight: isSelected ? '700' : '600', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {c.programa_nombre || c.programa}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                Edición: {c.cohorte_nombre || c.nombre} {c.programa_tipo && `• ${c.programa_tipo}`}
+                              </span>
+                            </div>
+                            {isSelected && <Check size={14} color="var(--color-accent)" style={{ flexShrink: 0 }} />}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

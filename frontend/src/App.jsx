@@ -21,6 +21,7 @@ import NuevaInscripcion from './pages/dashboard/NuevaInscripcion';
 import Mailing from './pages/dashboard/Mailing';
 import Seguridad from './pages/dashboard/Seguridad';
 import Preferencias from './pages/dashboard/Preferencias';
+import Ajustes from './pages/dashboard/Ajustes';
 import EstudianteDashboard from './pages/dashboard/EstudianteDashboard';
 import FacilitadorDashboard from './pages/dashboard/FacilitadorDashboard';
 import VerificarEmail from './pages/VerificarEmail';
@@ -164,6 +165,11 @@ function App() {
               <Route path="mailing" element={
                 <RoleRoute allowedRoles={['Administrador']}>
                   <Mailing />
+                </RoleRoute>
+              } />
+              <Route path="ajustes" element={
+                <RoleRoute allowedRoles={['Administrador']}>
+                  <Ajustes />
                 </RoleRoute>
               } />
             </Route>

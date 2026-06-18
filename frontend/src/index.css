@@ -17,6 +17,8 @@
   --glass-border: rgba(255, 255, 255, 0.3);
   --glass-shadow: rgba(127, 43, 128, 0.15);
 
+  --text-title: var(--color-primary-dark);
+
   color: var(--text-main);
   background-color: var(--bg-page);
   transition: background-color 0.3s, color 0.3s;
@@ -35,6 +37,7 @@
   --panel-bg: rgba(30, 26, 59, 0.6);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-shadow: rgba(0, 0, 0, 0.4);
+  --text-title: var(--text-main);
 }
 
 body {

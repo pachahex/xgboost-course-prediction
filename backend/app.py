@@ -2095,6 +2095,82 @@ def predecir_demanda():
         traceback.print_exc()
         return jsonify({"error": f"Error interno en predicción: {str(e)}"}), 500
 
+# ==========================================
+# RUTAS DE REENTRENAMIENTO DEL MODELO
+# ==========================================
+
+@app.route('/api/admin/modelo/status', methods=['GET'])
+@admin_required
+def get_modelo_status():
+    import os, json
+    from datetime import datetime
+    
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    dataset_path = os.path.join(base_dir, 'data', 'cohortes_dataset.csv')
+    metadata_path = os.path.join(base_dir, 'ml', 'model_metadata.json')
+    
+    # Current records
+    current_records = 0
+    if os.path.exists(dataset_path):
+        with open(dataset_path, 'r', encoding='utf-8') as f:
+            # -1 for header
+            current_records = max(0, sum(1 for line in f) - 1)
+            
+    # Default metadata if not found
+    metadata = {
+        "training_date": None,
+        "training_record_count": current_records
+    }
+    
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+        except:
+            pass
+            
+    # Rule evaluation
+    days_passed = 0
+    if metadata.get("training_date"):
+        try:
+            last_training = datetime.fromisoformat(metadata["training_date"])
+            days_passed = (datetime.now() - last_training).days
+        except:
+            pass
+            
+    old_records = metadata.get("training_record_count", current_records)
+    if old_records == 0:
+        old_records = 1  # avoid division by zero
+        
+    increase_pct = ((current_records - old_records) / old_records) * 100.0
+    increase_pct = max(0, increase_pct)
+    
+    can_retrain = days_passed >= 180 and increase_pct >= 10.0
+    
+    return jsonify({
+        "last_training": metadata.get("training_date"),
+        "days_passed": days_passed,
+        "days_required": 180,
+        "current_records": current_records,
+        "training_records": metadata.get("training_record_count", current_records),
+        "increase_pct": increase_pct,
+        "increase_required": 10.0,
+        "can_retrain": can_retrain
+    }), 200
+
+@app.route('/api/admin/modelo/retrain', methods=['POST'])
+@admin_required
+def retrain_modelo():
+    try:
+        from ml.train_model import train
+        # Train happens synchronously
+        train()
+        return jsonify({"message": "Reentrenamiento completado con éxito. El nuevo modelo y las visualizaciones SHAP han sido actualizadas."}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Error interno en reentrenamiento: {str(e)}"}), 500
+
 if __name__ == '__main__':
     # Habilitamos Flask para escuchar peticiones de Docker u host externo
     app.run(host='0.0.0.0', port=5000, debug=True)

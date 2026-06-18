@@ -4,6 +4,8 @@ import xgboost as xgb
 import shap
 import joblib
 import os
+import json
+from datetime import datetime
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -14,6 +16,7 @@ def train():
     dataset_path = os.path.join(base_dir, 'data', 'cohortes_dataset.csv')
     model_export_path = os.path.join(base_dir, 'ml', 'xgboost_model.pkl')
     shap_plot_path = os.path.join(base_dir, 'ml', 'shap_summary.png')
+    metadata_path = os.path.join(base_dir, 'ml', 'model_metadata.json')
     
     print("--------------------------------------------------")
     print("Iniciando Fase de Entrenamiento: XGBoost + SHAP")
@@ -101,6 +104,15 @@ def train():
     print("\nExportando el modelo optimizado (.pkl)...")
     joblib.dump(best_model, model_export_path)
     print(f"¡Éxito! Modelo exportado a: {model_export_path}")
+    
+    print("\nGuardando metadatos del modelo...")
+    metadata = {
+        "training_date": datetime.now().isoformat(),
+        "training_record_count": len(df)
+    }
+    with open(metadata_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, indent=4)
+        
     print("Pipeline de Machine Learning concluido satisfactoriamente.")
 
 if __name__ == "__main__":

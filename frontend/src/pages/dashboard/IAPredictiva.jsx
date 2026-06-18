@@ -31,7 +31,10 @@ const IAPredictiva = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [mesObjetivo, setMesObjetivo] = useState(new Date().getMonth() + 1);
+  const [mesObjetivo, setMesObjetivo] = useState(() => {
+    const stored = localStorage.getItem('marked_predictive_month');
+    return stored ? parseInt(stored) : new Date().getMonth() + 1;
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -54,7 +57,9 @@ const IAPredictiva = () => {
   }, [mesObjetivo]);
 
   const handleMesChange = (e) => {
-    setMesObjetivo(parseInt(e.target.value));
+    const val = parseInt(e.target.value);
+    setMesObjetivo(val);
+    localStorage.setItem('marked_predictive_month', val);
   };
 
   if (error) return <p style={{ color: 'red', textAlign: 'center', marginTop: '2rem' }}>Error: {error}</p>;

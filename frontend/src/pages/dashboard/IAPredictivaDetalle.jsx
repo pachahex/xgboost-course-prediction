@@ -34,6 +34,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 const IAPredictivaDetalle = () => {
   const [programId] = useState(() => localStorage.getItem('marked_predictive_program_id'));
   const [programName] = useState(() => localStorage.getItem('marked_predictive_program_name') || '');
+  const [targetMonth] = useState(() => {
+    const stored = localStorage.getItem('marked_predictive_month');
+    return stored ? parseInt(stored) : new Date().getMonth() + 1;
+  });
   const [loading, setLoading] = useState(() => !!localStorage.getItem('marked_predictive_program_id'));
   const [timeSeriesData, setTimeSeriesData] = useState([]);
   const [shapData, setShapData] = useState([]);
@@ -43,40 +47,38 @@ const IAPredictivaDetalle = () => {
   const fetchRealPredictiveData = async (id) => {
     try {
       setLoading(true);
-      const currentMonth = new Date().getMonth() + 1;
       
-      // Obtenemos la predicción real en lote para el mes actual
-      const res = await fetchApi(`/admin/predecir-demanda?mes=${currentMonth}`);
-      const progData = res.predicciones.find(p => p.programa_id == id);
+      // Consultamos los 12 meses en paralelo para construir la serie de tiempo real
+      const monthsToFetch = Array.from({ length: 12 }, (_, i) => i + 1);
+      const results = await Promise.all(
+        monthsToFetch.map(mes => fetchApi(`/admin/predecir-demanda?mes=${mes}`))
+      );
+      
+      // Obtenemos los datos predictivos reales del programa para el mes objetivo
+      const targetMonthRes = results[targetMonth - 1];
+      const progData = targetMonthRes.predicciones.find(p => p.programa_id == id);
       
       if (!progData) {
         throw new Error("El programa no se encontró en las predicciones (puede que no esté activo).");
       }
 
-      // Proyección a 12 meses basada en la predicción real actual desestacionalizada
-      const baseDemand = progData.demanda_predicha / (MULTIPLICADORES_MES[currentMonth] || 1);
-      
+      // Llenamos la serie de tiempo con las predicciones reales del backend para cada uno de los 12 meses
       const generatedSeries = [];
-      let totalPredicted = 0;
       
       for (let i = 1; i <= 12; i++) {
-        const estacionalidad = MULTIPLICADORES_MES[i] || 1;
-        let predicted = Math.round(baseDemand * estacionalidad);
-        if (predicted < 0) predicted = 0;
+        const resForMonth = results[i - 1];
+        const monthProgData = resForMonth.predicciones.find(p => p.programa_id == id);
+        const predicted = monthProgData ? Math.round(monthProgData.demanda_predicha) : 0;
         
         generatedSeries.push({
-          mes: MESES[i-1],
+          mes: MESES[i - 1],
           demanda: predicted
         });
-        
-        if (i >= currentMonth) {
-          totalPredicted += predicted;
-        }
       }
       
       setTimeSeriesData(generatedSeries);
       
-      // Extraemos y ordenamos los valores SHAP reales devueltos por XGBoost
+      // Extraemos y ordenamos los valores SHAP reales devueltos por XGBoost para el mes objetivo
       const shapEntries = Object.entries(progData.shap_values)
         .map(([key, value]) => ({
           name: key.replace('Categoria_', 'Cat: ').replace('Tipo_Programa_', 'Tipo: '),
@@ -93,7 +95,7 @@ const IAPredictivaDetalle = () => {
         confiabilidad: 85.4, // Este R2 viene del entrenamiento base
         mae: 3.49,
         rmse: 4.82,
-        promedioMensual: Math.round(progData.demanda_predicha) // Demanda puntual para el mes actual
+        promedioMensual: Math.round(progData.demanda_predicha) // Demanda real para el mes objetivo
       });
       
       setLoading(false);
@@ -170,7 +172,7 @@ const IAPredictivaDetalle = () => {
               <ArrowLeft size={18} style={{ marginRight: '4px' }}/> Ver Ranking de Programas
             </Link>
           </div>
-          <h2 style={{ color: 'var(--color-primary-dark)', margin: 0, fontSize: '2.2rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h2 style={{ color: 'var(--text-title)', margin: 0, fontSize: '2.2rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Brain size={32} color="var(--color-accent)" /> Detalle Predictivo
           </h2>
           <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem', fontSize: '1.1rem' }}>
@@ -199,7 +201,7 @@ const IAPredictivaDetalle = () => {
           height: '50vh', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' 
         }}>
           <div className="spinner" style={{ width: '50px', height: '50px', border: '4px solid var(--color-accent-light)', borderTop: '4px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-          <p style={{ marginTop: '1rem', color: 'var(--color-primary-dark)', fontWeight: 'bold' }}>Generando Inferencia Matemática para {programName}...</p>
+          <p style={{ marginTop: '1rem', color: 'var(--text-main)', fontWeight: 'bold' }}>Generando Inferencia Matemática para <span style={{ color: 'var(--color-accent)' }}>{programName}</span>...</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -213,12 +215,12 @@ const IAPredictivaDetalle = () => {
               <div style={{ textTransform: 'uppercase', letterSpacing: '2px', fontSize: '0.85rem', color: 'var(--color-accent-light)', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                 Programa Seleccionado
               </div>
-              <h3 style={{ margin: '0 0 1rem 0', fontSize: '2.2rem', fontWeight: '800', lineHeight: 1.2 }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '2.2rem', fontWeight: '800', lineHeight: 1.2, color: '#ffffff' }}>
                 {programName}
               </h3>
               <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>Demanda Proyectada Este Mes</div>
+                  <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>Demanda Proyectada en {MESES[targetMonth - 1]}</div>
                   <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--color-accent-light)' }}>{metrics?.promedioMensual} inscritos</div>
                 </div>
               </div>
@@ -227,7 +229,7 @@ const IAPredictivaDetalle = () => {
 
           {/* Gráfico SHAP Explicativo (Nueva sección agregada) */}
           <div className="glass-panel" style={{ padding: '2rem', backgroundColor: 'var(--panel-bg)', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--color-primary-dark)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-title)', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Brain size={24} color="var(--color-accent)" /> 
               Análisis de Explicabilidad (SHAP Values)
             </h3>
@@ -307,7 +309,7 @@ const IAPredictivaDetalle = () => {
 
           {/* Gráfico de Proyección a 12 Meses */}
           <div className="glass-panel" style={{ padding: '2rem', backgroundColor: 'var(--panel-bg)', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-            <h3 style={{ margin: '0 0 1.5rem 0', color: 'var(--color-primary-dark)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h3 style={{ margin: '0 0 1.5rem 0', color: 'var(--text-title)', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <TrendingUp size={24} color="var(--color-accent)" /> 
               Proyección de Demanda Estacional a 12 Meses
             </h3>

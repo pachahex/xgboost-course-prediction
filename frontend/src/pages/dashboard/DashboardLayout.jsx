@@ -309,9 +309,15 @@ const DashboardLayout = () => {
 
           <div style={{ margin: '1.5rem 0', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
           
-          <Link to="/dashboard/preferencias" style={getLinkStyle('/dashboard/preferencias')}>
-            <Settings size={18} /> Perfil y Preferencias
-          </Link>
+          {isActualAdmin ? (
+            <Link to="/dashboard/ajustes" style={getLinkStyle('/dashboard/ajustes')}>
+              <Settings size={18} /> Ajustes
+            </Link>
+          ) : (
+            <Link to="/dashboard/preferencias" style={getLinkStyle('/dashboard/preferencias')}>
+              <Settings size={18} /> Perfil y Preferencias
+            </Link>
+          )}
           <Link to="/dashboard/seguridad" style={getLinkStyle('/dashboard/seguridad')}>
             <ShieldCheck size={18} /> Seguridad (2FA)
           </Link>
