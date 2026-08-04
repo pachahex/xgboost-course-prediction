@@ -144,6 +144,10 @@ const IAPredictivaDetalle = () => {
       <style>{`
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
+        .seccion-firma {
+          display: none !important;
+        }
+        
         @media print {
           body * { visibility: hidden; }
           .detalle-predictivo-container, .detalle-predictivo-container * {
@@ -159,8 +163,37 @@ const IAPredictivaDetalle = () => {
             padding: 0 !important;
           }
           .no-print { display: none !important; }
-          .glass-panel { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
-          h2, h3, h4 { color: #000 !important; }
+          .glass-panel { 
+            box-shadow: none !important; 
+            border: 1px solid #ddd !important; 
+            padding: 1rem !important; 
+            margin-bottom: 0.5rem !important;
+            background: transparent !important;
+            color: #000 !important;
+            break-inside: avoid; 
+          }
+          h2, h3, h4 { color: #000 !important; margin-top: 0.25rem !important; margin-bottom: 0.25rem !important; }
+          
+          /* Safely compact layouts on print without breaking Recharts or Grids */
+          .reporte-contenido-container {
+            gap: 0.8rem !important;
+            zoom: 0.82; /* Escala global para encajar en 1 hoja sin romper Recharts */
+          }
+          .metrics-grid .glass-panel p {
+            display: none !important; /* Oculta descripciones para ahorrar espacio */
+          }
+          .metrics-grid .glass-panel {
+            padding: 1rem !important;
+          }
+          .seccion-firma * {
+            color: #000 !important;
+            border-color: #000 !important;
+          }
+          .seccion-firma {
+            display: block !important;
+            margin-top: 0.5rem !important;
+            padding: 1rem !important;
+          }
         }
       `}</style>
 
@@ -204,7 +237,7 @@ const IAPredictivaDetalle = () => {
           <p style={{ marginTop: '1rem', color: 'var(--text-main)', fontWeight: 'bold' }}>Generando Inferencia Matemática para <span style={{ color: 'var(--color-accent)' }}>{programName}</span>...</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div className="reporte-contenido-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
           {/* Header del Reporte */}
           <div className="glass-panel" style={{ padding: '2rem', backgroundColor: 'var(--color-primary-dark)', color: 'white', borderRadius: '16px', position: 'relative', overflow: 'hidden' }}>
@@ -237,7 +270,7 @@ const IAPredictivaDetalle = () => {
               Este gráfico explica matemáticamente por qué la IA predice este número de inscritos. Las barras verdes indican factores que <strong>aumentan</strong> la demanda, y las rojas indican factores que la <strong>disminuyen</strong>.
             </p>
             
-            <div style={{ height: '250px', width: '100%' }}>
+            <div className="chart-shap-container" style={{ height: '220px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={shapData} layout="vertical" margin={{ left: 80, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.3} />
@@ -255,7 +288,7 @@ const IAPredictivaDetalle = () => {
           </div>
 
           {/* Fila de Métricas de Confiabilidad */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div className="metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             {/* Confiabilidad (R2 modificado) */}
             <div className="glass-panel" style={{ padding: '1.5rem', backgroundColor: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
               <div style={{ padding: '1rem', borderRadius: '50%', backgroundColor: 'rgba(46, 204, 113, 0.1)', color: '#2ecc71' }}>
@@ -314,7 +347,7 @@ const IAPredictivaDetalle = () => {
               Proyección de Demanda Estacional a 12 Meses
             </h3>
             
-            <div style={{ height: '350px', width: '100%' }}>
+            <div className="chart-projection-container" style={{ height: '260px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={timeSeriesData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                   <defs>
@@ -340,7 +373,54 @@ const IAPredictivaDetalle = () => {
               </ResponsiveContainer>
             </div>
             <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              *La proyección incorpora patrones de estacionalidad académica y sensibilidad histórica a precios/categorías basada en Random Forest y XGBoost.
+              *La proyección incorpora patrones de estacionalidad académica y sensibilidad histórica a precios/categorías basada en XGBoost.
+            </div>
+          </div>
+
+          {/* Sección de Aceptación de Reapertura (Firma física) */}
+          <div className="seccion-firma glass-panel" style={{ 
+            padding: '2rem', 
+            backgroundColor: 'var(--panel-bg)', 
+            borderRadius: '16px', 
+            border: '1px solid var(--glass-border)',
+            breakInside: 'avoid',
+            marginTop: '1rem'
+          }}>
+            <h3 style={{ margin: '0 0 1.5rem 0', color: 'var(--text-title)', fontSize: '1.25rem', fontWeight: 'bold' }}>
+              Aceptación de Reapertura de Curso
+            </h3>
+            
+            <div style={{ display: 'flex', gap: '3rem', marginBottom: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ 
+                  width: '24px', 
+                  height: '24px', 
+                  border: '2px solid var(--text-main)', 
+                  borderRadius: '4px',
+                  backgroundColor: 'transparent'
+                }}></div>
+                <span style={{ color: 'var(--text-main)', fontWeight: '600', fontSize: '1rem' }}>Aceptado</span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ 
+                  width: '24px', 
+                  height: '24px', 
+                  border: '2px solid var(--text-main)', 
+                  borderRadius: '4px',
+                  backgroundColor: 'transparent'
+                }}></div>
+                <span style={{ color: 'var(--text-main)', fontWeight: '600', fontSize: '1rem' }}>Rechazado</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4.5rem' }}>
+              <div style={{ width: '280px', textAlign: 'center' }}>
+                <div style={{ borderBottom: '1.5px solid var(--text-main)', width: '100%', marginBottom: '0.75rem' }}></div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Firma del Administrador
+                </span>
+              </div>
             </div>
           </div>
 

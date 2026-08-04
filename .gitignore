@@ -8,3 +8,4 @@ backend/uploads/*
 backend/uploads/.gitkeep
 *.pyc
 postgres_data/
+backend/data/ga4_credentials.json
