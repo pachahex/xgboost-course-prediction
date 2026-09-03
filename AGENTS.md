@@ -67,7 +67,7 @@ docker exec -it xgboost-course-prediction-backend-1 python ml/train_model.py
   # Run verification script for dashboard analytical statistics
   python backend/test_stats.py
   
-  # Running automated test suite with pytest (see docs/guia_tests_automatizados.md)
+  # Running automated test suite with pytest (see docs/TESTING_GUIDE.md)
   pytest backend/tests
   ```
 
@@ -128,7 +128,7 @@ xgboost-course-prediction/
 │   └── package.json             # Vite configuration, React 19 dependencies, Recharts, Lucide icons
 ├── db/
 │   └── init/                    # PostgreSQL schema initialization scripts (01_schema.sql)
-├── docs/                        # Extensive technical docs (SHAP architecture, E2E/Unit testing, Normalization guide)
+├── docs/                        # Extensive technical docs (ARCHITECTURE.md, ML_AI_SYSTEM.md, TESTING_GUIDE.md)
 ├── docker-compose.yml           # Main microservice configuration for Docker Compose
 └── ml_tables.sql                # DDL schema definitions for ML analytics and prediction feature storage
 ```
